@@ -1,0 +1,1 @@
+{"name":"bus-bunching-lab","private":true,"type":"module","scripts":{"test":"node --test tests/engine.test.js","start":"python -m http.server 8080 --bind 127.0.0.1 --directory dist"}}
