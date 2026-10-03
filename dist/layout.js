@@ -1,0 +1,12 @@
+// Move complete working sections; use buttons so keyboard and touch work too.
+export function setupLayout(){
+  const main=document.querySelector('main'),workspace=document.querySelector('.workspace'),metrics=document.querySelector('.metrics'),charts=document.querySelector('.charts-panel'),bottom=document.querySelector('.bottom');
+  const container=document.createElement('div');container.id='sections';main.insertBefore(container,workspace);
+  const system=charts.querySelector('.system-chart'),buses=document.getElementById('busCharts');
+  const settings=document.createElement('section');settings.className='panel';settings.append(charts.querySelector('.chart-heading'));
+  system.classList.add('panel');buses.classList.add('panel');const h=document.createElement('h2');h.textContent='Per-bus statistics';h.style.gridColumn='1 / -1';buses.prepend(h);
+  const sections=[['route','Live route & dispatch',workspace],['summary','System summary',metrics],['chart-settings','Chart settings',settings],['system','System chart',system],['buses','Bus charts',buses],['log','Dispatch history',bottom.children[0]],['definitions','Model definitions',bottom.children[1]]];
+  function refresh(){for(const block of container.children){block.querySelector('[data-move="up"]').disabled=block===container.firstElementChild;block.querySelector('[data-move="down"]').disabled=block===container.lastElementChild;}}
+  for(const [id,label,content] of sections){const block=document.createElement('section');block.className='movable-block';block.dataset.section=id;const nav=document.createElement('nav');nav.className='layout-controls';nav.setAttribute('aria-label',`Position ${label}`);for(const [action,text] of [['first','Show first'],['up','↑ Move up'],['down','↓ Move down']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.dataset.move=action;button.setAttribute('aria-label',`${text}: ${label}`);button.onclick=()=>{if(action==='first')container.prepend(block);else if(action==='up'&&block.previousElementSibling)container.insertBefore(block,block.previousElementSibling);else if(action==='down'&&block.nextElementSibling)container.insertBefore(block.nextElementSibling,block);refresh();window.dispatchEvent(new Event('resize'));button.focus();};nav.append(button);}block.append(nav,content);container.append(block);}
+  charts.remove();bottom.remove();refresh();
+}

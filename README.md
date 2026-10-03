@@ -39,8 +39,21 @@ The −1 minute button and review timeline restore the entire earlier simulation
 2. One delay: a 60-second hold on Bus 1 at minute 20.
 3. Random demand: Poisson arrivals, random rides and seed 42, with no imposed delay.
 4. Recovery through holds: the same minute-20 delay, followed by automatic dispatch every 30 seconds from minute 25 through minute 60. At service stops, buses with forward gaps below 95% of ideal receive holds proportional to the gap deficit, capped at 120 seconds.
-5. Recovery through express: the same delay and dispatch period. At service stops, buses with forward gaps above 125% of ideal skip a number of stops based on the gap excess. Affected riders transfer.
+5. Recovery through alternating express: a 60-second hold on Bus 1 at minute 20; checks every 30 seconds from minute 25 through minute 60 activate recovery when a forward gap exceeds 125% of ideal. Serve one stop and skip the next until the gap is at or below ideal, checking at every arrival. Only destinations at the next planned skipped stop require transfer. Active recovery can continue beyond minute 60 until its target is reached.
+6. Fixed-count express comparison: the same explicitly scheduled minute-20 hold and minute-25-to-60 dispatch checks, using ceil(forward gap − ideal gap) skipped stops. This heuristic does not guarantee the gap returns to ideal, because skipping saves dwell but not segment travel time.
 
-These are illustrative dispatch rules, not optimized policies. With the default setup at minute 60, the delay-only run has spatial headway variation of 173%; the hold run reduces it to approximately 6%, and the express run to 28%. The express run produces 154 transfers. Compare passenger outcomes as well as spacing: a better-spaced route can still impose riding time or transfers.
+These are illustrative dispatch rules, not optimized policies. At minute 60 with the default setup, the delay-only run has spatial headway variation of 173%, the hold run about 6%, alternating express 29%, and fixed-count express 28%. Alternating express produces 132 transfers versus 154 for fixed-count express, but has higher completed-passenger mean system time (398 versus 390 seconds). Compare passenger outcomes as well as spacing.
+
+## Chart readouts, averages and layout
+
+Every graph shows its low and high individual values from the last simulated minute and its current trailing-average value, observation count and update time. No observations in that minute displays a dash; the trailing average stays at its last published value.
+
+Dwell axes share one range across all buses; wait axes share another. Auto ranges use the entire run's extremes, so they do not shrink merely because a peak leaves the visible window. Fixed axis ceilings can be set identically across windows, and copy along with the experiment. Observations above a fixed ceiling are clipped visually but remain in statistics and CSV.
+
+Whole-stop mode publishes averages only when a bus departs the stop. It includes complete groups until at least the configured number of passenger observations is covered, avoiding partial-group ordering artifacts. Dwell uses served-stop observations. Each-passenger mode preserves the original exact-N trailing average. Raw passenger values and service order never change.
+
+System time and the mean system time card both include initial queue wait: they measure final debarking time minus first arrival time, including boarding, riding, onboard holds and transfer queues. The mean card includes all completed passengers immediately; only the chart's whole-stop average waits for group departure.
+
+Use Show first, Move up and Move down to reorder the route, summary, chart controls, system chart, bus charts, dispatch history and definitions within the page. Layout changes are local to the open page.
 
 Browser memory retains the current run. CSV exports preserve its observations outside the browser.

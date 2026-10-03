@@ -1,4 +1,7 @@
 preview.jpg
 update-ui.py
 prepare-publish.mjs
+upgrade-charts.py
+refine-ui.py
+version-assets.py
 .sites-runtime/

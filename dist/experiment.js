@@ -1,11 +1,12 @@
-import {Simulation} from './engine.js';
+import {Simulation} from './engine.js?v=20261003b';
 
 export const scenarios = [
   {id:'balanced',name:'Balanced · fixed arrivals',description:'An evenly spaced baseline with regular arrivals. No interventions.',config:{},events:[]},
   {id:'delay',name:'One delay → bunching',description:'At minute 20, Bus 1 is held for 60 seconds. Watch its queue grow and the following bus catch up.',config:{},events:[{t:1200,type:'hold',bus:0,value:60}]},
   {id:'variance',name:'Random demand → bunching',description:'Poisson arrivals and varied ride lengths gradually disturb the spacing, without any imposed delay. Seed 42 reproduces the run.',config:{arrival:'poisson',rideMode:'random'},events:[]},
-  {id:'holds',name:'Recover with bus holds',description:'The same minute-20 delay. From minute 25 to 60, a dispatcher holds buses with small forward gaps at service stops. Compare against “One delay”.',config:{},events:[{t:1200,type:'hold',bus:0,value:60}],policy:'hold'},
-  {id:'express',name:'Recover with temporary express',description:'The same minute-20 delay. From minute 25 to 60, buses with large forward gaps skip stops. Transfers and passenger costs remain in the statistics.',config:{},events:[{t:1200,type:'hold',bus:0,value:60}],policy:'express'},
+  {id:'holds',name:'Recover with bus holds',description:'12 stops, 4 evenly spaced buses and fixed passenger arrivals. At minute 20, Bus 1 receives a 60-second hold. From minute 25 through 60, dispatch checks every 30 seconds and holds buses at service stops when their forward gap is below 95% of the ideal 3 stops. Holds are proportional to the deficit and capped at 120 seconds. Watch queue waits and onboard delay as spacing recovers.',config:{},events:[{t:1200,type:'hold',bus:0,value:60}],policy:'hold'},
+  {id:'express',name:'Recover with temporary express',description:'12 stops, 4 evenly spaced buses and fixed passenger arrivals. At minute 20, Bus 1 receives a 60-second hold. From minute 25 through 60, dispatch activates alternating express when a bus has more than 3.75 stops of forward gap. It serves one stop, skips the next, and rechecks at each stop until its gap is 3 stops or less. Only riders bound for the next planned skipped stop transfer. Compare spacing, transfers and total passenger time.',config:{},events:[{t:1200,type:'hold',bus:0,value:60}],policy:'express'},
+  {id:'express-count',name:'Compare · fixed-count express',description:'12 stops, 4 evenly spaced buses and fixed arrivals. Bus 1 is held 60 seconds at minute 20. From minute 25 through 60, dispatch checks every 30 seconds. At a service stop, a bus with more than 3.75 stops of forward gap skips ceil(gap − 3) stops, then resumes service. This is a fixed-count heuristic: skipping avoids dwell, not segment travel, so the gap need not recover to 3. Compare with alternating express.',config:{},events:[{t:1200,type:'hold',bus:0,value:60}],policy:'express-count'},
 ];
 
 // Replay from the seed and timestamped commands restores passengers, random state,
@@ -35,10 +36,11 @@ export class Experiment {
   seek(target){if(!Number.isFinite(target))throw Error('Invalid time');target=Math.max(0,Math.min(this.furthest,target));if(target<this.sim.time)this.rebuild(target);else this.advanceTo(target);}
   action(bus,type,value){new Simulation(this.config).action(bus,type,value);const t=this.sim.time;this.commands=this.commands.filter(x=>x.t<=t);this.commands.push({t,bus,type,value});this.furthest=t;this.rebuild(t);}
   dispatch(policy){const s=this.sim,n=s.c.stops,ideal=n/s.c.buses;
-    for(const b of s.buses){if(b.phase==='travel'||b.pendingHold||b.holdUntil>s.time||b.express||b.pendingExpress)continue;
+    for(const b of s.buses){if(b.phase==='travel'||b.pendingHold||b.holdUntil>s.time||b.express||b.pendingExpress||b.recoveryExpress)continue;
       const p=s.position(b);let gap=n;for(const other of s.buses)if(other!==b)gap=Math.min(gap,(s.position(other)-p+n)%n);
       if(policy==='hold'&&gap<ideal*.95){s.action(b.id,'hold',Math.min(120,Math.max(1,(ideal-gap)*s.c.travel*2.5)));}
-      if(policy==='express'&&gap>ideal*1.25){s.action(b.id,'express',Math.min(n-1,Math.max(1,Math.ceil(gap-ideal))));}
+      if(policy==='express'&&gap>ideal*1.25){s.action(b.id,'recovery',1);}
+      if(policy==='express-count'&&gap>ideal*1.25){s.action(b.id,'express',Math.min(n-1,Math.max(1,Math.ceil(gap-ideal))));}
     }
   }
   upcoming(){return this.events.slice(this.cursor).find(x=>x.type!=='policy')||this.events.slice(this.cursor).find(x=>x.type==='policy');}
