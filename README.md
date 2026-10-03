@@ -27,4 +27,20 @@ Temporary express begins after servicing the current stop, or the next stop if t
 - Trailing averages use the last N observations. Graphs display the last 60 simulation minutes. CSV retains all observations from the current run.
 - Headway variation is the coefficient of variation of spatial gaps, not a passenger metric. Zero means even spacing.
 
-Browser memory retains the current run. Reset or reload clears it; CSV is the retention mechanism.
+## Reviewing and comparing experiments
+
+The −1 minute button and review timeline restore the entire earlier simulation state, including queues, riders, random draws, scheduled dispatch and observations. Replay is deterministic. Adding an intervention after rewinding branches the experiment: later manual commands are discarded, while preset dispatch stays scheduled. Reset or reload clears the run.
+
+“New window with this state” opens an independent paused copy with the same model state, observation history, seed, preset schedule and manual-command history. Playback speed and trailing-window size are copied too. The browser may open a tab instead of a separate window. Arrange the copies side by side to compare interventions. Browser local storage carries a one-time copy token; it is removed once the new window restores it. Allow pop-ups if the browser blocks the copy.
+
+## Preset experiments
+
+1. Balanced fixed arrivals: the baseline with no interventions.
+2. One delay: a 60-second hold on Bus 1 at minute 20.
+3. Random demand: Poisson arrivals, random rides and seed 42, with no imposed delay.
+4. Recovery through holds: the same minute-20 delay, followed by automatic dispatch every 30 seconds from minute 25 through minute 60. At service stops, buses with forward gaps below 95% of ideal receive holds proportional to the gap deficit, capped at 120 seconds.
+5. Recovery through express: the same delay and dispatch period. At service stops, buses with forward gaps above 125% of ideal skip a number of stops based on the gap excess. Affected riders transfer.
+
+These are illustrative dispatch rules, not optimized policies. With the default setup at minute 60, the delay-only run has spatial headway variation of 173%; the hold run reduces it to approximately 6%, and the express run to 28%. The express run produces 154 transfers. Compare passenger outcomes as well as spacing: a better-spaced route can still impose riding time or transfers.
+
+Browser memory retains the current run. CSV exports preserve its observations outside the browser.
