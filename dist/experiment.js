@@ -1,4 +1,4 @@
-import {Simulation} from './engine.js?v=20261003b';
+import {Simulation} from './engine.js?v=20261003c';
 
 export const scenarios = [
   {id:'balanced',name:'Balanced · fixed arrivals',description:'An evenly spaced baseline with regular arrivals. No interventions.',config:{},events:[]},

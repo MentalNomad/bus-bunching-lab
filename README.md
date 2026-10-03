@@ -54,6 +54,6 @@ Whole-stop mode publishes averages only when a bus departs the stop. It includes
 
 System time and the mean system time card both include initial queue wait: they measure final debarking time minus first arrival time, including boarding, riding, onboard holds and transfer queues. The mean card includes all completed passengers immediately; only the chart's whole-stop average waits for group departure.
 
-Use Show first, Move up and Move down to reorder the route, summary, chart controls, system chart, bus charts, dispatch history and definitions within the page. Layout changes are local to the open page.
+Click the small ↕ indicator to reveal Show first, Move up and Move down to reorder the route, summary, chart controls, system chart, bus charts, dispatch history and definitions within the page. Layout changes are local to the open page.
 
 Browser memory retains the current run. CSV exports preserve its observations outside the browser.
