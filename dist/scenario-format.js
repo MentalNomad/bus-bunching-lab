@@ -1,4 +1,4 @@
-import {Simulation} from './engine.js?v=20261003g';
+import {Simulation} from './engine.js?v=20261003h';
 
 const fields={stops:'stops',buses:'buses',travel_seconds_per_segment:'travel',passengers_per_stop_per_minute:'rate',arrival_pattern:'arrival',boarding_seconds_per_passenger:'board',debarking_seconds_per_passenger:'debark',ride_length_stops:'ride',ride_pattern:'rideMode',random_seed:'seed'};
 const rules={'hold-v1':'hold','alternating-express-v1':'express','fixed-count-express-v1':'express-count'};

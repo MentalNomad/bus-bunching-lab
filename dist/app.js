@@ -1,10 +1,10 @@
-import {Simulation} from './engine.js?v=20261003g';
-import {Experiment,scenarios} from './experiment.js?v=20261003g';
-import {chartData,sharedScale} from './chart-data.js?v=20261003g';
-import {setupLayout} from './layout.js?v=20261003g';
-import {loadCustomPresets,setupScenarioLibrary} from './scenario-ui.js?v=20261003g';
-import {setupHelp} from './help.js?v=20261003g';
-import {scenarioFromSearch} from './scenario-links.js?v=20261003g';
+import {Simulation} from './engine.js?v=20261003h';
+import {Experiment,scenarios} from './experiment.js?v=20261003h';
+import {chartData,sharedScale} from './chart-data.js?v=20261003h';
+import {setupLayout} from './layout.js?v=20261003h';
+import {loadCustomPresets,setupScenarioLibrary} from './scenario-ui.js?v=20261003h';
+import {setupHelp} from './help.js?v=20261003h';
+import {scenarioFromSearch} from './scenario-links.js?v=20261003h';
 loadCustomPresets();
 let refreshHelp=()=>{};
 const $=id=>document.getElementById(id),colors=['#3f7960','#dc7141','#5173bc','#ae668c','#9b8629','#55969a','#8356ad','#cc5656','#53782b','#9e642f','#575ea3','#a7466a','#287887','#786945','#69518b','#945d52'];
@@ -19,12 +19,12 @@ function initialize(){
   const heading=document.createElement('h2');heading.textContent='Per-bus statistics';heading.style.gridColumn='1 / -1';$('busCharts').prepend(heading);$('expressValue').max=sim.c.stops-1;$('config').elements.ride.max=sim.c.stops-1;render();
 }
 function setRunning(v){running=v;last=performance.now();$('run').textContent=running?'Ⅱ Pause':'▶ Run route';$('status').textContent=running?'Route running':sim.time?'Paused':'Ready to run';$('statusDot').classList.toggle('running',running);}
-function reset(c=sim.c,scenarioId=experiment.scenarioId){experiment=new Experiment(c,scenarioId);sim=experiment.sim;setRunning(false);$('message').textContent='';syncForm();initialize();}
+function reset(c=sim.c,scenarioId=experiment.scenarioId){const replacement=scenarioId===experiment.scenarioId?experiment.restart(c):new Experiment(c,scenarioId);experiment=replacement;sim=experiment.sim;$('setupMessage').textContent='';$('setupMessage').hidden=true;setRunning(false);$('message').textContent='';syncForm();initialize();}
 function syncForm(){ $('introHint').textContent=experiment.scenarioId==='variance'&&sim.c.arrival==='poisson'?'Hit Run route: random passenger demand gradually disrupts even spacing. Let it run for several simulated laps.':'Hit Run route to try “'+experiment.definition.name+'”. Find its setup and scheduled dispatch in the Scenario Library below.';for(const [k,v] of Object.entries(sim.c))$('config').elements[k].value=v;$('scenario').value=experiment.scenarioId;$('scenario').dispatchEvent(new Event('change'));}
 function advance(seconds){experiment.advanceTo(sim.time+seconds);sim=experiment.sim;}
 function dispatch(bus,type,value){experiment.action(bus,type,value);sim=experiment.sim;}
 $('config').elements.stops.oninput=()=>{$('config').elements.ride.max=+$('config').elements.stops.value-1;};
-$('config').onsubmit=e=>{e.preventDefault();try{const c=Object.fromEntries(new FormData(e.target));for(const k of ['stops','travel','buses','rate','board','debark','ride','seed'])c[k]=+c[k];reset(c);}catch(e){$('message').textContent=e.message;}};
+$('config').onsubmit=e=>{e.preventDefault();try{const c=Object.fromEntries(new FormData(e.target));for(const k of ['stops','travel','buses','rate','board','debark','ride','seed'])c[k]=+c[k];reset(c);}catch(e){$('setupMessage').textContent='Setup not applied. '+e.message+' The current run is unchanged.';$('setupMessage').hidden=false;}};
 $('run').onclick=()=>setRunning(!running);$('step').onclick=()=>{setRunning(false);advance(60);render();};$('reset').onclick=()=>reset();
 for(const id of ['brandExplainer','titleExplainer'])$(id).onclick=()=>{const panel=$('problemExplainer');panel.hidden=!panel.hidden;for(const toggle of ['brandExplainer','titleExplainer'])$(toggle).setAttribute('aria-expanded',String(!panel.hidden));};
 $('scenario').innerHTML=scenarios.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');

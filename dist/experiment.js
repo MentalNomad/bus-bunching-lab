@@ -1,5 +1,5 @@
-import {Simulation} from './engine.js?v=20261003g';
-import {parseScenario,serializeScenario} from './scenario-format.js?v=20261003g';
+import {Simulation} from './engine.js?v=20261003h';
+import {parseScenario,serializeScenario} from './scenario-format.js?v=20261003h';
 
 export const scenarios = [
   {id:'balanced',name:'Balanced · fixed arrivals',description:'An evenly spaced baseline with regular arrivals. No interventions.',config:{},events:[]},
@@ -17,8 +17,17 @@ export class Experiment {
     const scenario=definition||scenarios.find(x=>x.id===scenarioId);
     if(!scenario)throw Error('Unknown scenario');
     this.definition=structuredClone(scenario);this.scenarioId=scenarioId;this.config=new Simulation({...scenario.config,...config}).c;
+    const validation=new Simulation(this.config);
+    for(const [index,event] of scenario.events.entries()){
+      const context=`Scheduled intervention ${index+1} at ${event.t}s`;
+      if(!Number.isFinite(event.t)||event.t<0||event.t>604800)throw Error(`${context}: time must be between 0 and 604,800 seconds.`);
+      if(!Number.isInteger(event.bus)||event.bus<0||event.bus>=this.config.buses)throw Error(`${context}: Bus ${event.bus+1} does not exist with ${this.config.buses} ${this.config.buses===1?'bus':'buses'}. Increase the bus count or edit the scenario text.`);
+      if(event.type==='express'&&(!Number.isInteger(event.value)||event.value<1||event.value>=this.config.stops))throw Error(`${context}: skipping ${event.value} stops is invalid on a ${this.config.stops}-stop route. Use 1–${this.config.stops-1} skips or edit the scenario text.`);
+      try{validation.action(event.bus,event.type,event.value);}catch(error){throw Error(`${context} (Bus ${event.bus+1}): ${error.message}`);}
+    }
     this.commands=[];this.furthest=0;this.rebuild(0);
   }
+  restart(config=this.config){return new Experiment(config,this.scenarioId,this.definition);}
   static restore(data){
     if(data?.version!==1||!Number.isFinite(data.time)||data.time<0||data.time>604800||!Array.isArray(data.commands)||data.commands.length>10000)throw Error('Invalid experiment copy');
     const e=new Experiment(data.config,data.scenarioId,data.scenarioText?parseScenario(data.scenarioText):null);
