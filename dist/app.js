@@ -1,7 +1,7 @@
-import {Simulation} from './engine.js?v=20261003c';
-import {Experiment,scenarios} from './experiment.js?v=20261003c';
-import {chartData,sharedScale} from './chart-data.js?v=20261003c';
-import {setupLayout} from './layout.js?v=20261003c';
+import {Simulation} from './engine.js?v=20261003d';
+import {Experiment,scenarios} from './experiment.js?v=20261003d';
+import {chartData,sharedScale} from './chart-data.js?v=20261003d';
+import {setupLayout} from './layout.js?v=20261003d';
 const $=id=>document.getElementById(id),colors=['#3f7960','#dc7141','#5173bc','#ae668c','#9b8629','#55969a','#8356ad','#cc5656','#53782b','#9e642f','#575ea3','#a7466a','#287887','#786945','#69518b','#945d52'];
 let experiment=new Experiment(),sim=experiment.sim,running=false,last=performance.now(),lastDraw=0;
 const clock=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;

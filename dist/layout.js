@@ -1,11 +1,12 @@
 // Move complete working sections; use buttons so keyboard and touch work too.
 export function setupLayout(){
   const main=document.querySelector('main'),workspace=document.querySelector('.workspace'),metrics=document.querySelector('.metrics'),charts=document.querySelector('.charts-panel'),bottom=document.querySelector('.bottom');
-  const container=document.createElement('div');container.id='sections';main.insertBefore(container,workspace);
+  const library=document.querySelector('.scenario-panel');
+  const container=document.createElement('div');container.id='sections';main.insertBefore(container,library);
   const system=charts.querySelector('.system-chart'),buses=document.getElementById('busCharts');
   const settings=document.createElement('section');settings.className='panel';settings.append(charts.querySelector('.chart-heading'));
   system.classList.add('panel');buses.classList.add('panel');const h=document.createElement('h2');h.textContent='Per-bus statistics';h.style.gridColumn='1 / -1';buses.prepend(h);
-  const sections=[['route','Live route & dispatch',workspace],['summary','System summary',metrics],['chart-settings','Chart settings',settings],['system','System chart',system],['buses','Bus charts',buses],['log','Dispatch history',bottom.children[0]],['definitions','Model definitions',bottom.children[1]]];
+  const sections=[['scenarios','Scenario Library',library],['route','Live route & dispatch',workspace],['summary','System summary',metrics],['chart-settings','Chart settings',settings],['system','System chart',system],['buses','Bus charts',buses],['log','Dispatch history',bottom.children[0]],['definitions','Model definitions',bottom.children[1]]];
   function refresh(){for(const block of container.children){block.querySelector('[data-move="up"]').disabled=block===container.firstElementChild;block.querySelector('[data-move="down"]').disabled=block===container.lastElementChild;}}
   function closeControls(){for(const nav of container.querySelectorAll('.layout-controls')){nav.querySelector('.layout-menu').hidden=true;nav.querySelector('.layout-toggle').setAttribute('aria-expanded','false');}}
   for(const [id,label,content] of sections){
