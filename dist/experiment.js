@@ -1,5 +1,5 @@
-import {Simulation} from './engine.js?v=20261003e';
-import {parseScenario,serializeScenario} from './scenario-format.js?v=20261003e';
+import {Simulation} from './engine.js?v=20261003f';
+import {parseScenario,serializeScenario} from './scenario-format.js?v=20261003f';
 
 export const scenarios = [
   {id:'balanced',name:'Balanced · fixed arrivals',description:'An evenly spaced baseline with regular arrivals. No interventions.',config:{},events:[]},

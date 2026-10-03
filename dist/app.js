@@ -1,13 +1,13 @@
-import {Simulation} from './engine.js?v=20261003e';
-import {Experiment,scenarios} from './experiment.js?v=20261003e';
-import {chartData,sharedScale} from './chart-data.js?v=20261003e';
-import {setupLayout} from './layout.js?v=20261003e';
-import {loadCustomPresets,setupScenarioLibrary} from './scenario-ui.js?v=20261003e';
-import {setupHelp} from './help.js?v=20261003e';
+import {Simulation} from './engine.js?v=20261003f';
+import {Experiment,scenarios} from './experiment.js?v=20261003f';
+import {chartData,sharedScale} from './chart-data.js?v=20261003f';
+import {setupLayout} from './layout.js?v=20261003f';
+import {loadCustomPresets,setupScenarioLibrary} from './scenario-ui.js?v=20261003f';
+import {setupHelp} from './help.js?v=20261003f';
 loadCustomPresets();
 let refreshHelp=()=>{};
 const $=id=>document.getElementById(id),colors=['#3f7960','#dc7141','#5173bc','#ae668c','#9b8629','#55969a','#8356ad','#cc5656','#53782b','#9e642f','#575ea3','#a7466a','#287887','#786945','#69518b','#945d52'];
-let experiment=new Experiment(),sim=experiment.sim,running=false,last=performance.now(),lastDraw=0;
+let experiment=new Experiment({},'variance'),sim=experiment.sim,running=false,last=performance.now(),lastDraw=0;
 const clock=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 const duration=t=>t>=60?`${(t/60).toFixed(1)} min`:`${t.toFixed(0)} sec`;
 function initialize(){
@@ -23,7 +23,7 @@ function dispatch(bus,type,value){experiment.action(bus,type,value);sim=experime
 $('config').elements.stops.oninput=()=>{$('config').elements.ride.max=+$('config').elements.stops.value-1;};
 $('config').onsubmit=e=>{e.preventDefault();try{const c=Object.fromEntries(new FormData(e.target));for(const k of ['stops','travel','buses','rate','board','debark','ride','seed'])c[k]=+c[k];reset(c);}catch(e){$('message').textContent=e.message;}};
 $('run').onclick=()=>setRunning(!running);$('step').onclick=()=>{setRunning(false);advance(60);render();};$('reset').onclick=()=>reset();
-$('balanced').onclick=()=>reset(new Simulation().c,'balanced');
+for(const id of ['brandExplainer','titleExplainer'])$(id).onclick=()=>{const panel=$('problemExplainer');panel.hidden=!panel.hidden;for(const toggle of ['brandExplainer','titleExplainer'])$(toggle).setAttribute('aria-expanded',String(!panel.hidden));};
 $('scenario').innerHTML=scenarios.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
 $('loadScenario').onclick=()=>{const id=$('scenario').value,s=scenarios.find(x=>x.id===id);reset({...new Simulation().c,...s.config},id);};
 $('back').onclick=()=>{setRunning(false);experiment.seek(sim.time-60);sim=experiment.sim;render();};

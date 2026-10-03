@@ -1,5 +1,5 @@
-import {scenarios} from './experiment.js?v=20261003e';
-import {parseScenario,serializeScenario,ruleDescriptions} from './scenario-format.js?v=20261003e';
+import {scenarios} from './experiment.js?v=20261003f';
+import {parseScenario,serializeScenario,ruleDescriptions} from './scenario-format.js?v=20261003f';
 const storageKey='bus-lab-custom-scenarios-v1';
 export function loadCustomPresets(){
   try{const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');if(!Array.isArray(saved)||saved.length>100)return;for(const item of saved){try{const s=parseScenario(item.text);if(typeof item.id!=='string'||!/^custom-[a-f0-9-]+$/.test(item.id))continue;s.id=item.id;s.custom=true;scenarios.push(s);}catch{}}}catch{}
