@@ -1,13 +1,16 @@
-import {Simulation} from './engine.js?v=20261003f';
-import {Experiment,scenarios} from './experiment.js?v=20261003f';
-import {chartData,sharedScale} from './chart-data.js?v=20261003f';
-import {setupLayout} from './layout.js?v=20261003f';
-import {loadCustomPresets,setupScenarioLibrary} from './scenario-ui.js?v=20261003f';
-import {setupHelp} from './help.js?v=20261003f';
+import {Simulation} from './engine.js?v=20261003g';
+import {Experiment,scenarios} from './experiment.js?v=20261003g';
+import {chartData,sharedScale} from './chart-data.js?v=20261003g';
+import {setupLayout} from './layout.js?v=20261003g';
+import {loadCustomPresets,setupScenarioLibrary} from './scenario-ui.js?v=20261003g';
+import {setupHelp} from './help.js?v=20261003g';
+import {scenarioFromSearch} from './scenario-links.js?v=20261003g';
 loadCustomPresets();
 let refreshHelp=()=>{};
 const $=id=>document.getElementById(id),colors=['#3f7960','#dc7141','#5173bc','#ae668c','#9b8629','#55969a','#8356ad','#cc5656','#53782b','#9e642f','#575ea3','#a7466a','#287887','#786945','#69518b','#945d52'];
-let experiment=new Experiment({},'variance'),sim=experiment.sim,running=false,last=performance.now(),lastDraw=0;
+const linkedScenario=scenarioFromSearch(location.search);
+let experiment=new Experiment({},linkedScenario.id),sim=experiment.sim,running=false,last=performance.now(),lastDraw=0;
+if(linkedScenario.invalid)$('message').textContent='Unknown scenario link. Loaded Random demand → bunching. Choose a built-in scenario from the library below.';
 const clock=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 const duration=t=>t>=60?`${(t/60).toFixed(1)} min`:`${t.toFixed(0)} sec`;
 function initialize(){
@@ -17,7 +20,7 @@ function initialize(){
 }
 function setRunning(v){running=v;last=performance.now();$('run').textContent=running?'Ⅱ Pause':'▶ Run route';$('status').textContent=running?'Route running':sim.time?'Paused':'Ready to run';$('statusDot').classList.toggle('running',running);}
 function reset(c=sim.c,scenarioId=experiment.scenarioId){experiment=new Experiment(c,scenarioId);sim=experiment.sim;setRunning(false);$('message').textContent='';syncForm();initialize();}
-function syncForm(){for(const [k,v] of Object.entries(sim.c))$('config').elements[k].value=v;$('scenario').value=experiment.scenarioId;}
+function syncForm(){ $('introHint').textContent=experiment.scenarioId==='variance'&&sim.c.arrival==='poisson'?'Hit Run route: random passenger demand gradually disrupts even spacing. Let it run for several simulated laps.':'Hit Run route to try “'+experiment.definition.name+'”. Find its setup and scheduled dispatch in the Scenario Library below.';for(const [k,v] of Object.entries(sim.c))$('config').elements[k].value=v;$('scenario').value=experiment.scenarioId;$('scenario').dispatchEvent(new Event('change'));}
 function advance(seconds){experiment.advanceTo(sim.time+seconds);sim=experiment.sim;}
 function dispatch(bus,type,value){experiment.action(bus,type,value);sim=experiment.sim;}
 $('config').elements.stops.oninput=()=>{$('config').elements.ride.max=+$('config').elements.stops.value-1;};
