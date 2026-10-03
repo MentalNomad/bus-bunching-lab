@@ -57,3 +57,11 @@ System time and the mean system time card both include initial queue wait: they 
 Click the small ↕ indicator to reveal Show first, Move up and Move down to reorder the route, summary, chart controls, system chart, bus charts, dispatch history and definitions within the page. Layout changes are local to the open page.
 
 Browser memory retains the current run. CSV exports preserve its observations outside the browser.
+
+## Sharing educator scenarios
+
+Export scenario opens editable, formatted JSON text for copying. It captures the active scenario definition, the applied route setup and seed, all preset events (including future events), and all manual commands retained in the run history. The exported experiment starts at time zero, rather than saving current passengers or charts. Import scenario validates pasted text and saves a custom preset in browser local storage without replacing the current run. Select Load scenario & reset to run it. Keep exported text for cross-browser sharing and backup; local storage can be cleared by the browser.
+
+Version 1 uses explicit setup units, one-based bus numbers, and `at_seconds` from time zero. `hold` uses `seconds`, `slow` uses `multiplier`, and `express` uses `stops`. Same-time interventions run in listed order. A recovery policy specifies a versioned rule, start/end seconds and check interval. The exported notes and rule explanation document the exact behavior; versioned rule identifiers determine execution. The in-page format reference explains all three recovery rules and their thresholds. Unknown fields, invalid values, unsupported versions and rules are rejected. Imports allow up to 1,000 interventions, 100 saved presets, and a seven-day schedule.
+
+Dotted statistical labels and control text provide explanations on hover, keyboard focus or tap. Escape or clicking elsewhere dismisses an explanation. Metric labels and chart readouts remain stable during playback so keyboard focus and explanations are not lost when values update.

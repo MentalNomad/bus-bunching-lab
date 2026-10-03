@@ -1,4 +1,5 @@
-import {Simulation} from './engine.js?v=20261003d';
+import {Simulation} from './engine.js?v=20261003e';
+import {parseScenario,serializeScenario} from './scenario-format.js?v=20261003e';
 
 export const scenarios = [
   {id:'balanced',name:'Balanced · fixed arrivals',description:'An evenly spaced baseline with regular arrivals. No interventions.',config:{},events:[]},
@@ -12,21 +13,21 @@ export const scenarios = [
 // Replay from the seed and timestamped commands restores passengers, random state,
 // active service references, observations and scheduled dispatch exactly.
 export class Experiment {
-  constructor(config={},scenarioId='balanced') {
-    const scenario=scenarios.find(x=>x.id===scenarioId);
+  constructor(config={},scenarioId='balanced',definition=null) {
+    const scenario=definition||scenarios.find(x=>x.id===scenarioId);
     if(!scenario)throw Error('Unknown scenario');
-    this.scenarioId=scenarioId;this.config=new Simulation({...scenario.config,...config}).c;
+    this.definition=structuredClone(scenario);this.scenarioId=scenarioId;this.config=new Simulation({...scenario.config,...config}).c;
     this.commands=[];this.furthest=0;this.rebuild(0);
   }
   static restore(data){
     if(data?.version!==1||!Number.isFinite(data.time)||data.time<0||data.time>604800||!Array.isArray(data.commands)||data.commands.length>10000)throw Error('Invalid experiment copy');
-    const e=new Experiment(data.config,data.scenarioId);
+    const e=new Experiment(data.config,data.scenarioId,data.scenarioText?parseScenario(data.scenarioText):null);
     for(const x of data.commands){if(!Number.isFinite(x.t)||x.t<0||x.t>604800)throw Error('Invalid command time');new Simulation(e.config).action(x.bus,x.type,x.value);}
     e.commands=structuredClone(data.commands).sort((a,b)=>a.t-b.t);e.furthest=Math.max(data.time,Number.isFinite(data.furthest)?data.furthest:data.time);e.rebuild(data.time);return e;
   }
-  export(){return {version:1,config:this.config,scenarioId:this.scenarioId,time:this.sim.time,furthest:this.furthest,commands:structuredClone(this.commands)};}
-  rebuild(target){this.sim=new Simulation(this.config);const scenario=scenarios.find(x=>x.id===this.scenarioId);this.events=[...scenario.events.map(x=>({...x,source:'preset'})),...this.commands.map(x=>({...x,source:'manual'}))];
-    if(scenario.policy)for(let t=1500;t<=3600;t+=30)this.events.push({t,type:'policy',policy:scenario.policy,source:'preset'});
+  export(){return {version:1,config:this.config,scenarioId:this.scenarioId,scenarioText:serializeScenario(this.definition,this.config),time:this.sim.time,furthest:this.furthest,commands:structuredClone(this.commands)};}
+  rebuild(target){this.sim=new Simulation(this.config);const scenario=this.definition;this.events=[...scenario.events.map(x=>({...x,source:'preset'})),...this.commands.map(x=>({...x,source:'manual'}))];
+    if(scenario.policy){const {start=1500,end=3600,interval=30}=scenario.policySchedule||{};for(let i=0;start+i*interval<=end;i++)this.events.push({t:start+i*interval,type:'policy',policy:scenario.policy,source:'preset'});}
     this.events.sort((a,b)=>a.t-b.t);this.cursor=0;this.advanceTo(target);
   }
   advanceTo(target){if(!Number.isFinite(target)||target<this.sim.time)throw Error('Invalid target time');
