@@ -44,7 +44,7 @@ const control = {
     'Fixed rides all have the configured stop count. Random rides use a uniform range around that count, capped below one full loop.',
   seed: 'Starting value for the repeatable random sequence. Matching settings, seed, and interventions produce matching runs.',
   speed:
-    'Simulated seconds per real second. Playback speed changes how fast you watch, not simulation outcomes.',
+    'Simulated seconds per real second. Max runs as fast as your device allows, in short bursts that keep controls responsive. Charts still refresh periodically. Playback speed changes how fast you watch, not simulation outcomes.',
   window:
     'Number of recent passenger observations for wait and system charts; number of served stops for dwell charts. Whole-stop mode retains entire groups, potentially using more than this number. Early runs use available observations.',
   averageMode:

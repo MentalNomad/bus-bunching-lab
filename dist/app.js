@@ -3,8 +3,9 @@ import { Experiment, scenarios } from './experiment.js?v=20261004a';
 import { chartData, sharedScale } from './chart-data.js?v=20261004a';
 import { setupLayout } from './layout.js?v=20261004a';
 import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261004a';
-import { setupHelp } from './help.js?v=20261004a';
+import { setupHelp } from './help.js?v=20261004b';
 import { scenarioFromSearch } from './scenario-links.js?v=20261004a';
+import { advanceMaxSpeed } from './playback.js?v=20261004b';
 loadCustomPresets();
 let refreshHelp = () => {};
 const $ = (id) => document.getElementById(id),
@@ -94,7 +95,7 @@ function dispatch(bus, type, value) {
   experiment.action(bus, type, value);
   sim = experiment.sim;
 }
-function pausedAction(action) {
+function pausedAction(action = () => {}) {
   setRunning(false);
   try {
     action();
@@ -122,7 +123,7 @@ $('config').onsubmit = (e) => {
     $('setupMessage').hidden = false;
   }
 };
-$('run').onclick = () => setRunning(!running);
+$('run').onclick = () => (running ? pausedAction() : setRunning(true));
 $('step').onclick = () => pausedAction(() => advance(60));
 $('reset').onclick = () => pausedAction(() => reset());
 for (const id of ['brandExplainer', 'titleExplainer'])
@@ -152,6 +153,7 @@ $('timeline').oninput = () => {
 $('copy').onclick = () => {
   setRunning(false);
   try {
+    render();
     const key = 'bus-lab-copy-' + crypto.randomUUID();
     const payload = JSON.stringify({
       experiment: experiment.export(),
@@ -460,8 +462,17 @@ function frame(now) {
   last = now;
   if (!running) return;
   try {
-    advance(elapsed * +$('speed').value);
-    if (now - lastDraw > 120) {
+    if ($('speed').value === 'max') {
+      if (advanceMaxSpeed(experiment)) {
+        setRunning(false);
+        $('message').textContent =
+          'Seven-day run limit reached. Export the data, then reset to start another run.';
+      }
+      sim = experiment.sim;
+    } else {
+      advance(elapsed * +$('speed').value);
+    }
+    if (!running || now - lastDraw > 120) {
       render();
       lastDraw = now;
     }
@@ -490,7 +501,7 @@ try {
     const data = JSON.parse(raw);
     experiment = Experiment.restore(data.experiment);
     sim = experiment.sim;
-    if (['1', '10', '30', '60', '120'].includes(data.speed)) $('speed').value = data.speed;
+    if (['1', '10', '30', '60', '120', 'max'].includes(data.speed)) $('speed').value = data.speed;
     if (Number.isInteger(+data.window) && +data.window >= 1 && +data.window <= 500)
       $('window').value = data.window;
     if (data.charts) {
