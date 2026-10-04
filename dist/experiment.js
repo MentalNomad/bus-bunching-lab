@@ -1,5 +1,5 @@
-import {Simulation} from './engine.js?v=20261003h';
-import {parseScenario,serializeScenario} from './scenario-format.js?v=20261003h';
+import {Simulation,MAX_SIMULATION_SECONDS} from './engine.js?v=20261003r';
+import {parseScenario,serializeScenario,checkInterventionCount} from './scenario-format.js?v=20261003r';
 
 export const scenarios = [
   {id:'balanced',name:'Balanced · fixed arrivals',description:'An evenly spaced baseline with regular arrivals. No interventions.',config:{},events:[]},
@@ -17,34 +17,69 @@ export class Experiment {
     const scenario=definition||scenarios.find(x=>x.id===scenarioId);
     if(!scenario)throw Error('Unknown scenario');
     this.definition=structuredClone(scenario);this.scenarioId=scenarioId;this.config=new Simulation({...scenario.config,...config}).c;
-    const validation=new Simulation(this.config);
+    checkInterventionCount(scenario.events.length);
     for(const [index,event] of scenario.events.entries()){
       const context=`Scheduled intervention ${index+1} at ${event.t}s`;
       if(!Number.isFinite(event.t)||event.t<0||event.t>604800)throw Error(`${context}: time must be between 0 and 604,800 seconds.`);
       if(!Number.isInteger(event.bus)||event.bus<0||event.bus>=this.config.buses)throw Error(`${context}: Bus ${event.bus+1} does not exist with ${this.config.buses} ${this.config.buses===1?'bus':'buses'}. Increase the bus count or edit the scenario text.`);
       if(event.type==='express'&&(!Number.isInteger(event.value)||event.value<1||event.value>=this.config.stops))throw Error(`${context}: skipping ${event.value} stops is invalid on a ${this.config.stops}-stop route. Use 1–${this.config.stops-1} skips or edit the scenario text.`);
-      try{validation.action(event.bus,event.type,event.value);}catch(error){throw Error(`${context} (Bus ${event.bus+1}): ${error.message}`);}
+      try{new Simulation(this.config).action(event.bus,event.type,event.value);}catch(error){throw Error(`${context} (Bus ${event.bus+1}): ${error.message}`);}
     }
     this.commands=[];this.furthest=0;this.rebuild(0);
   }
   restart(config=this.config){return new Experiment(config,this.scenarioId,this.definition);}
   static restore(data){
-    if(data?.version!==1||!Number.isFinite(data.time)||data.time<0||data.time>604800||!Array.isArray(data.commands)||data.commands.length>10000)throw Error('Invalid experiment copy');
+    if(data?.version!==1||!Number.isFinite(data.time)||data.time<0||data.time>MAX_SIMULATION_SECONDS||!Array.isArray(data.commands))throw Error('Invalid experiment copy');
+    const furthest=data.furthest??data.time;
+    if(!Number.isFinite(furthest)||furthest<data.time||furthest>MAX_SIMULATION_SECONDS)throw Error('Invalid experiment copy timeline');
     const e=new Experiment(data.config,data.scenarioId,data.scenarioText?parseScenario(data.scenarioText):null);
-    for(const x of data.commands){if(!Number.isFinite(x.t)||x.t<0||x.t>604800)throw Error('Invalid command time');new Simulation(e.config).action(x.bus,x.type,x.value);}
-    e.commands=structuredClone(data.commands).sort((a,b)=>a.t-b.t);e.furthest=Math.max(data.time,Number.isFinite(data.furthest)?data.furthest:data.time);e.rebuild(data.time);return e;
+    checkInterventionCount(e.definition.events.length+data.commands.length);
+    for(const x of data.commands){if(!x||!Number.isFinite(x.t)||x.t<0||x.t>furthest)throw Error('Invalid command time');new Simulation(e.config).action(x.bus,x.type,x.value);}
+    e.commands=structuredClone(data.commands).sort((a,b)=>a.t-b.t);e.furthest=furthest;e.rebuild(data.time);return e;
   }
   export(){return {version:1,config:this.config,scenarioId:this.scenarioId,scenarioText:serializeScenario(this.definition,this.config),time:this.sim.time,furthest:this.furthest,commands:structuredClone(this.commands)};}
-  rebuild(target){this.sim=new Simulation(this.config);const scenario=this.definition;this.events=[...scenario.events.map(x=>({...x,source:'preset'})),...this.commands.map(x=>({...x,source:'manual'}))];
-    if(scenario.policy){const {start=1500,end=3600,interval=30}=scenario.policySchedule||{};for(let i=0;start+i*interval<=end;i++)this.events.push({t:start+i*interval,type:'policy',policy:scenario.policy,source:'preset'});}
-    this.events.sort((a,b)=>a.t-b.t);this.cursor=0;this.advanceTo(target);
+  schedule(){const scenario=this.definition,events=[...scenario.events.map(x=>({...x,source:'preset'})),...this.commands.map(x=>({...x,source:'manual'}))];
+    if(scenario.policy){const {start=1500,end=3600,interval=30}=scenario.policySchedule||{};for(let i=0;start+i*interval<=end;i++)events.push({t:start+i*interval,type:'policy',policy:scenario.policy,source:'preset'});}
+    // Live manual dispatch follows any checks that already ran at this instant.
+    // Preserve that same order when replaying or importing exported commands.
+    return events.sort((a,b)=>a.t-b.t||(a.type==='policy'?-1:b.type==='policy'?1:0));
+  }
+  rebuild(target){
+    // Keep the displayed model intact if replay fails. Only install a complete result.
+    const replacement=Object.assign(Object.create(Experiment.prototype),this,{sim:new Simulation(this.config),events:this.schedule(),cursor:0});
+    replacement.advanceTo(target);
+    this.sim=replacement.sim;this.events=replacement.events;this.cursor=replacement.cursor;this.furthest=replacement.furthest;
+  }
+  advanceModel(target){
+    // The event guard applies to each small batch, regardless of seek/copy distance.
+    while(target-this.sim.time>60)this.sim.advance(60);
+    this.sim.advance(target-this.sim.time);
   }
   advanceTo(target){if(!Number.isFinite(target)||target<this.sim.time)throw Error('Invalid target time');
-    while(this.cursor<this.events.length&&this.events[this.cursor].t<=target){const event=this.events[this.cursor++];this.sim.advance(event.t-this.sim.time);if(event.type==='policy')this.dispatch(event.policy);else this.sim.action(event.bus,event.type,event.value);}
-    this.sim.advance(target-this.sim.time);this.furthest=Math.max(this.furthest,target);
+    if(target>MAX_SIMULATION_SECONDS)throw Error('Seven-day run limit reached. Export the data, then reset to start another run.');
+    try{
+      while(this.cursor<this.events.length&&this.events[this.cursor].t<=target){
+        const event=this.events[this.cursor];this.advanceModel(event.t);
+        if(event.type==='policy')this.dispatch(event.policy);
+        else {
+          // A combined delay may become invalid only when its scheduled time arrives.
+          // Keep this visible in the dispatch log and allow the lesson to continue.
+          try{this.sim.action(event.bus,event.type,event.value);}catch(error){this.sim.note(`Skipped ${event.source} dispatch for Bus ${event.bus+1}: ${error.message}`);}
+        }
+        this.cursor++;
+      }
+      this.advanceModel(target);
+    }finally{this.furthest=Math.max(this.furthest,this.sim.time);}
   }
   seek(target){if(!Number.isFinite(target))throw Error('Invalid time');target=Math.max(0,Math.min(this.furthest,target));if(target<this.sim.time)this.rebuild(target);else this.advanceTo(target);}
-  action(bus,type,value){new Simulation(this.config).action(bus,type,value);const t=this.sim.time;this.commands=this.commands.filter(x=>x.t<=t);this.commands.push({t,bus,type,value});this.furthest=t;this.rebuild(t);}
+  action(bus,type,value){
+    const t=this.sim.time,commands=this.commands.filter(x=>x.t<=t);
+    checkInterventionCount(this.definition.events.length+commands.length+1);
+    this.sim.action(bus,type,value); // Engine validation completes before any mutation.
+    commands.push({t,bus,type,value});this.commands=commands;this.furthest=t;
+    this.events=this.schedule();this.cursor=this.events.findIndex(event=>event.t>t);if(this.cursor<0)this.cursor=this.events.length;
+    this.sim.advance(0);
+  }
   dispatch(policy){const s=this.sim,n=s.c.stops,ideal=n/s.c.buses;
     for(const b of s.buses){if(b.phase==='travel'||b.pendingHold||b.holdUntil>s.time||b.express||b.pendingExpress||b.recoveryExpress)continue;
       const p=s.position(b);let gap=n;for(const other of s.buses)if(other!==b)gap=Math.min(gap,(s.position(other)-p+n)%n);
@@ -53,5 +88,5 @@ export class Experiment {
       if(policy==='express-count'&&gap>ideal*1.25){s.action(b.id,'express',Math.min(n-1,Math.max(1,Math.ceil(gap-ideal))));}
     }
   }
-  upcoming(){return this.events.slice(this.cursor).find(x=>x.type!=='policy')||this.events.slice(this.cursor).find(x=>x.type==='policy');}
+  upcoming(){return this.events[this.cursor];}
 }
