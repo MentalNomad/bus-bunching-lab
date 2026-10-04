@@ -1,0 +1,32 @@
+{
+  "format": "Bus Bunching Lab scenario",
+  "version": 1,
+  "name": "Recover with alternating express",
+  "description": "Start a 12-stop route with four evenly spaced buses, fixed demand and seed 42. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through minute 60, check every 30 seconds for buses with large forward gaps. Eligible buses alternate serving and skipping stops until their gap recovers. Compare transfers, waiting passengers, and total passenger time with the same delay and no recovery policy.",
+  "setup": {
+    "stops": 12,
+    "buses": 4,
+    "travel_seconds_per_segment": 40,
+    "passengers_per_stop_per_minute": 3,
+    "arrival_pattern": "fixed",
+    "boarding_seconds_per_passenger": 2,
+    "debarking_seconds_per_passenger": 1,
+    "ride_length_stops": 4,
+    "ride_pattern": "fixed",
+    "random_seed": 42
+  },
+  "interventions": [
+    {
+      "at_seconds": 1200,
+      "bus": 1,
+      "action": "hold",
+      "seconds": 60
+    }
+  ],
+  "recovery_policy": {
+    "rule": "alternating-express-v1",
+    "start_seconds": 1500,
+    "end_seconds": 3600,
+    "check_every_seconds": 30
+  }
+}

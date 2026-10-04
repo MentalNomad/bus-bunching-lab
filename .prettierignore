@@ -1,0 +1,7 @@
+node_modules/
+.git/
+.openai/
+.sites-runtime/
+package-lock.json
+preview.jpg
+prepare-publish.mjs

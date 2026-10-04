@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Create and share reproducible bus bunching lessons. Complete scenario examples, timed actions, recovery rules, and a plain-language format reference."
+    />
+    <title>Scenario authoring guide · Bus Bunching Lab</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23203e35'/%3E%3Cpath d='M9 9h14v14H9z' fill='%23d5f184'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./scenario-guide.css?v=20261004a" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to the guide</a>
+    <header class="site-header">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">↻</span>
+        <div>Bus Bunching Lab<small>SCENARIO AUTHORING GUIDE</small></div>
+      </div>
+      <a class="lab-link" href="./index.html#scenarioLibrary" target="_blank" rel="noopener"
+        >Open a new lab tab ↗</a
+      >
+    </header>
+    <main id="main">
+      <div class="hero">
+        <span class="eyebrow">For educators & curious dispatchers</span>
+        <h1>Design a repeatable lesson.</h1>
+        <p class="lead">
+          Choose the route, schedule a disruption, and compare recovery strategies. One small text
+          file keeps the setup, seed, and dispatch instructions together.
+        </p>
+        <p class="small">
+          Keep this guide beside your experiment. Switch back to your existing lab tab to continue
+          its run; “Open a new lab tab” starts a separate experiment at time zero.
+        </p>
+      </div>
+      <div class="guide-layout">
+        <nav class="contents" aria-labelledby="contents-title">
+          <h2 id="contents-title">In this guide</h2>
+          <ol>
+            <li><a href="#quick-start">Import your first lesson</a></li>
+            <li><a href="#examples">Complete examples</a></li>
+            <li><a href="#format">Set up the route</a></li>
+            <li><a href="#timed-actions">Schedule timed actions</a></li>
+            <li><a href="#recovery">Choose a recovery rule</a></li>
+            <li><a href="#sharing">Compare, export & share</a></li>
+          </ol>
+        </nav>
+        <div class="guide-body">
+          <section class="guide-section" id="quick-start" aria-labelledby="quick-start-title">
+            <span class="section-number">01 / Quick start</span>
+            <h2 id="quick-start-title">From example to experiment</h2>
+            <p>
+              A scenario is a recipe for a fresh run. Every run starts with empty queues and evenly
+              spaced buses in motion. You can begin with either complete example below.
+            </p>
+            <ol class="steps">
+              <li>
+                <strong>Copy a complete example.</strong> Use its Copy button, or download the JSON
+                file and open it in a text editor. Copy everything from the first <code>{</code> to
+                the final <code>}</code>.
+              </li>
+              <li>
+                <strong>Return to your lab tab.</strong> In the Scenario library, choose
+                <strong>Import scenario</strong> and paste the text. Change the name and description
+                if you want your own lesson title.
+              </li>
+              <li>
+                <strong>Choose Save as preset.</strong> This validates the text, saves a custom
+                preset in this browser, and selects it in the library. Your current run continues
+                unchanged.
+              </li>
+              <li>
+                <strong>Close the panel, then choose Load scenario &amp; reset.</strong> This starts
+                the selected lesson at time zero. Use <strong>Run route</strong> or
+                <strong>+ 1 minute</strong> to reach the scheduled actions.
+              </li>
+            </ol>
+            <div class="callout">
+              <p>
+                <strong>Saving and loading are separate steps.</strong> Export any run you want to
+                keep before loading a new lesson. A saved preset remains in this browser, so keep a
+                text copy for sharing and backup.
+              </p>
+            </div>
+          </section>
+
+          <section class="guide-section" id="examples" aria-labelledby="examples-title">
+            <span class="section-number">02 / Ready to import</span>
+            <h2 id="examples-title">Two complete lessons</h2>
+            <p>
+              These examples are complete scenario files. Their downloadable JSON and the text shown
+              here are the same. The smaller code samples later in this guide are fragments to edit
+              inside a complete file.
+            </p>
+            <article class="example" aria-labelledby="timed-example-title">
+              <h3 id="timed-example-title">A baseline, then three timed actions</h3>
+              <span class="tag">COMPLETE SCENARIO</span>
+              <p>
+                Run a balanced route for 20 minutes, then introduce a hold, a slowdown, and a
+                two-stop express instruction at minutes 20, 30, and 40. Automatic recovery is off.
+              </p>
+              <p class="hint">
+                For a clean baseline comparison, make a second copy with
+                <code>"interventions": []</code>. Keep every other field the same.
+              </p>
+              <div class="example-actions">
+                <button type="button" data-copy-example="timed-example" hidden>
+                  Copy complete timed-actions example
+                </button>
+                <a href="./examples/timed-actions.json" download>Download timed-actions.json ↓</a>
+              </div>
+              <p class="copy-status" id="timed-example-status" role="status" aria-live="polite"></p>
+              <textarea
+                class="copy-fallback"
+                id="timed-example-fallback"
+                aria-label="Complete timed-actions example for manual copying"
+                readonly
+                hidden
+              ></textarea>
+              <details open>
+                <summary>Read the complete timed-actions JSON</summary>
+                <pre
+                  class="code"
+                  tabindex="0"
+                  aria-label="Complete timed-actions scenario JSON"
+                ><code id="timed-example" data-example-file="./examples/timed-actions.json">{
+  "format": "Bus Bunching Lab scenario",
+  "version": 1,
+  "name": "Baseline and three timed actions",
+  "description": "Begin with evenly spaced buses and fixed demand. At minute 20, hold Bus 1 for 60 seconds. At minute 30, double travel time on Bus 2's current or next segment. At minute 40, send Bus 1 past two stops after its current or next service stop. Compare the gaps and passenger costs before and after each action.",
+  "setup": {
+    "stops": 12,
+    "buses": 4,
+    "travel_seconds_per_segment": 40,
+    "passengers_per_stop_per_minute": 3,
+    "arrival_pattern": "fixed",
+    "boarding_seconds_per_passenger": 2,
+    "debarking_seconds_per_passenger": 1,
+    "ride_length_stops": 4,
+    "ride_pattern": "fixed",
+    "random_seed": 42
+  },
+  "interventions": [
+    {
+      "at_seconds": 1200,
+      "bus": 1,
+      "action": "hold",
+      "seconds": 60
+    },
+    {
+      "at_seconds": 1800,
+      "bus": 2,
+      "action": "slow",
+      "multiplier": 2
+    },
+    {
+      "at_seconds": 2400,
+      "bus": 1,
+      "action": "express",
+      "stops": 2
+    }
+  ],
+  "recovery_policy": null
+}
+</code></pre>
+              </details>
+            </article>
+            <article class="example" aria-labelledby="recovery-example-title">
+              <h3 id="recovery-example-title">Recover with alternating express</h3>
+              <span class="tag">COMPLETE SCENARIO</span>
+              <p>
+                Hold Bus 1 for 60 seconds at minute 20, then check for recovery opportunities every
+                30 seconds from minute 25 through minute 60. This example has no timed slowdown or
+                fixed-count express action.
+              </p>
+              <p class="hint">
+                For a fair test of recovery, compare this file against a copy with
+                <code>"recovery_policy": null</code>. Keep the same hold, setup, and seed in both.
+              </p>
+              <div class="example-actions">
+                <button type="button" data-copy-example="recovery-example" hidden>
+                  Copy complete recovery example
+                </button>
+                <a href="./examples/alternating-recovery.json" download
+                  >Download alternating-recovery.json ↓</a
+                >
+              </div>
+              <p
+                class="copy-status"
+                id="recovery-example-status"
+                role="status"
+                aria-live="polite"
+              ></p>
+              <textarea
+                class="copy-fallback"
+                id="recovery-example-fallback"
+                aria-label="Complete recovery example for manual copying"
+                readonly
+                hidden
+              ></textarea>
+              <details>
+                <summary>Read the complete recovery JSON</summary>
+                <pre
+                  class="code"
+                  tabindex="0"
+                  aria-label="Complete recovery scenario JSON"
+                ><code id="recovery-example" data-example-file="./examples/alternating-recovery.json">{
+  "format": "Bus Bunching Lab scenario",
+  "version": 1,
+  "name": "Recover with alternating express",
+  "description": "Start a 12-stop route with four evenly spaced buses, fixed demand and seed 42. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through minute 60, check every 30 seconds for buses with large forward gaps. Eligible buses alternate serving and skipping stops until their gap recovers. Compare transfers, waiting passengers, and total passenger time with the same delay and no recovery policy.",
+  "setup": {
+    "stops": 12,
+    "buses": 4,
+    "travel_seconds_per_segment": 40,
+    "passengers_per_stop_per_minute": 3,
+    "arrival_pattern": "fixed",
+    "boarding_seconds_per_passenger": 2,
+    "debarking_seconds_per_passenger": 1,
+    "ride_length_stops": 4,
+    "ride_pattern": "fixed",
+    "random_seed": 42
+  },
+  "interventions": [
+    {
+      "at_seconds": 1200,
+      "bus": 1,
+      "action": "hold",
+      "seconds": 60
+    }
+  ],
+  "recovery_policy": {
+    "rule": "alternating-express-v1",
+    "start_seconds": 1500,
+    "end_seconds": 3600,
+    "check_every_seconds": 30
+  }
+}
+</code></pre>
+              </details>
+            </article>
+            <noscript
+              ><p class="callout">
+                The full examples and downloads work without JavaScript. Select the JSON text
+                manually to copy it.
+              </p></noscript
+            >
+          </section>
+
+          <section class="guide-section" id="format" aria-labelledby="format-title">
+            <span class="section-number">03 / File & route setup</span>
+            <h2 id="format-title">Give the lesson a clear starting point</h2>
+            <p>
+              The format is JSON: keep the exact field names and double quotes, write numbers
+              without quotes, and use no comments or trailing commas. Unknown fields are rejected so
+              a misspelled setting cannot silently change your lesson.
+            </p>
+            <details>
+              <summary>Required sections and optional notes</summary>
+              <div class="table-wrap" tabindex="0" aria-label="Scenario fields">
+                <table>
+                  <caption>
+                    Fields at the outermost level
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">What to write</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>format</code></td>
+                      <td>Exactly <code>"Bus Bunching Lab scenario"</code>.</td>
+                    </tr>
+                    <tr>
+                      <td><code>version</code></td>
+                      <td>The number <code>1</code>.</td>
+                    </tr>
+                    <tr>
+                      <td><code>name</code></td>
+                      <td>A nonblank title, 1–100 characters.</td>
+                    </tr>
+                    <tr>
+                      <td><code>description</code></td>
+                      <td>
+                        Lesson instructions, up to 4,000 characters. An empty string is allowed.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>setup</code></td>
+                      <td>An object containing all ten route settings below.</td>
+                    </tr>
+                    <tr>
+                      <td><code>interventions</code></td>
+                      <td>A list of timed actions. Use <code>[]</code> for none.</td>
+                    </tr>
+                    <tr>
+                      <td><code>recovery_policy</code></td>
+                      <td>
+                        One recovery-rule object, or <code>null</code> to turn automatic recovery
+                        off.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>notes</code> <em>(optional)</em></td>
+                      <td>
+                        Up to 4,000 characters of documentation. Notes do not control the model.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="hint">
+                Every field above except <code>notes</code> is required. Empty intervention lists
+                and a <code>null</code> recovery policy must still be written explicitly.
+              </p>
+            </details>
+            <details>
+              <summary>All ten setup fields, units, and allowed values</summary>
+              <div class="table-wrap" tabindex="0" aria-label="Setup fields and allowed values">
+                <table>
+                  <caption>
+                    All settings are required inside
+                    <code>setup</code>
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Meaning and range</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>stops</code></td>
+                      <td>Number of stops around the loop. Integer, 3–40.</td>
+                    </tr>
+                    <tr>
+                      <td><code>buses</code></td>
+                      <td>Number of buses. Integer, 1–16.</td>
+                    </tr>
+                    <tr>
+                      <td><code>travel_seconds_per_segment</code></td>
+                      <td>Travel time between adjacent stops, in seconds. 1–600.</td>
+                    </tr>
+                    <tr>
+                      <td><code>passengers_per_stop_per_minute</code></td>
+                      <td>
+                        Arrival rate at each stop, in passengers per minute. 0–60; zero means no new
+                        passengers.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>arrival_pattern</code></td>
+                      <td>
+                        <code>"fixed"</code> for regular intervals, synchronized across stops;
+                        <code>"poisson"</code> for independent random exponential intervals.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>boarding_seconds_per_passenger</code></td>
+                      <td>Time to board one passenger, in seconds. 0–30.</td>
+                    </tr>
+                    <tr>
+                      <td><code>debarking_seconds_per_passenger</code></td>
+                      <td>Time for one passenger to leave a bus, in seconds. 0–30.</td>
+                    </tr>
+                    <tr>
+                      <td><code>ride_length_stops</code></td>
+                      <td>
+                        Fixed ride length, or the setting used to generate random rides. Integer, 1
+                        through <code>stops − 1</code>.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>ride_pattern</code></td>
+                      <td>
+                        <code>"fixed"</code> uses the chosen ride length.
+                        <code>"random"</code> picks a uniform integer from 1 through
+                        <code>min(2 × ride_length_stops − 1, stops − 1)</code>.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>random_seed</code></td>
+                      <td>Repeatable random sequence. Integer, 1–2,147,483,647.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="hint">
+                Ranges include their endpoints. Numeric fields may have decimals unless marked
+                “integer.” Changing the seed changes random arrivals and rides; it has no effect
+                when both patterns are fixed.
+              </p>
+            </details>
+            <div class="callout">
+              <p>
+                <strong>Keep the experiment comparable.</strong> Start with identical setup and
+                seed, then change one intervention or recovery rule. Bus capacity is unlimited,
+                overtaking is allowed, and debarking happens before boarding, one passenger at a
+                time.
+              </p>
+            </div>
+          </section>
+
+          <section class="guide-section" id="timed-actions" aria-labelledby="timed-actions-title">
+            <span class="section-number">04 / Timed interventions</span>
+            <h2 id="timed-actions-title">Tell dispatch what to do, and when</h2>
+            <p>
+              Each entry in <code>interventions</code> needs <code>at_seconds</code>,
+              <code>bus</code>, <code>action</code>, and the one parameter for that action. Time is
+              measured from the start of the run; bus numbers start at <strong>1</strong>.
+            </p>
+            <p>
+              <code>at_seconds</code> can be any number from 0 through 604,800 (seven days).
+              <code>bus</code> must be an integer from 1 through your configured bus count. Actions
+              are sorted by time; those at the same time run in listed order,
+              <strong>after any recovery check at that time</strong>.
+            </p>
+            <details open>
+              <summary>Hold: add time at a service stop</summary>
+              <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
+              <pre
+                class="code"
+                tabindex="0"
+                aria-label="Hold intervention fragment"
+              ><code>{ "at_seconds": 1200, "bus": 1, "action": "hold", "seconds": 60 }</code></pre>
+              <p>
+                <code>seconds</code> must be greater than 0 and at most 3,600. If the bus is moving,
+                the hold begins at its next service stop. If stopped, it begins now. Passengers
+                continue boarding during a hold; the bus leaves only when both the hold and service
+                are finished.
+              </p>
+              <p class="hint">
+                Repeated holds add to the remaining active or queued hold. Service time overlaps the
+                hold, so a 60-second hold does not necessarily add 60 seconds to the final departure
+                time.
+              </p>
+            </details>
+            <details>
+              <summary>Slow: multiply remaining segment travel</summary>
+              <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
+              <pre
+                class="code"
+                tabindex="0"
+                aria-label="Slow intervention fragment"
+              ><code>{ "at_seconds": 1800, "bus": 2, "action": "slow", "multiplier": 2 }</code></pre>
+              <p>
+                <code>multiplier</code> is a number from 1 through 10. While moving, it multiplies
+                the time still left on the current segment. If 10 seconds remain, a multiplier of 2
+                makes that 20 seconds. At a stop, it applies to the next segment instead.
+              </p>
+              <p class="hint">
+                Repeated slowdowns while moving multiply the remaining time again. While stopped, a
+                new slowdown replaces the pending multiplier for the next segment. A multiplier of 1
+                does not undo an earlier slowdown already applied in motion.
+              </p>
+            </details>
+            <details>
+              <summary>Express: serve a stop, then skip a fixed count</summary>
+              <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
+              <pre
+                class="code"
+                tabindex="0"
+                aria-label="Express intervention fragment"
+              ><code>{ "at_seconds": 2400, "bus": 1, "action": "express", "stops": 2 }</code></pre>
+              <p>
+                <code>stops</code> is an integer from 1 through <code>setup.stops − 1</code>. A
+                stopped bus serves its current stop, then skips that many consecutive stops. A
+                moving bus serves its next service stop first, then begins skipping. It still
+                travels every segment; skipping avoids stop service time.
+              </p>
+              <p>
+                Before departure, onboard riders whose destinations will be skipped leave the bus
+                and rejoin the queue at the service stop. Waiting riders for those destinations do
+                not board this express bus. Transferred riders keep their original arrival time and
+                accumulated wait; they need another suitable bus to finish their trip.
+              </p>
+              <p class="hint">
+                A timed express action is a fixed count. It does not wait for the gap to recover,
+                and it replaces any alternating recovery mode on that bus.
+              </p>
+            </details>
+            <p class="hint">
+              Use at most 1,000 timed interventions, including manual dispatches recorded during the
+              run. Combined queued holds or multiplied segment travel cannot exceed seven days. If a
+              scheduled combination would exceed that limit, the action is skipped with an
+              explanation in Dispatch history.
+            </p>
+          </section>
+
+          <section class="guide-section" id="recovery" aria-labelledby="recovery-title">
+            <span class="section-number">05 / Automatic recovery</span>
+            <h2 id="recovery-title">Choose one versioned rule</h2>
+            <p>
+              Set <code>recovery_policy</code> to <code>null</code>, or choose one of the three
+              exact rule names below. The rule name fixes its thresholds and formulas. Editing
+              <code>description</code>, <code>notes</code>, or optional
+              <code>rule_explanation</code> text changes documentation only.
+            </p>
+            <div class="callout">
+              <p>
+                <strong>Ideal gap = stops ÷ buses.</strong> Forward gap is the distance to the
+                nearest bus ahead, measured in stop units. With 12 stops and 4 buses, the ideal gap
+                is 3 stops.
+              </p>
+              <p>
+                At each scheduled check, a bus is eligible only if it is at a service stop and has
+                no active or queued hold, fixed-count express, or alternating express recovery.
+                Buses travelling between stops are skipped for that check.
+              </p>
+            </div>
+            <div class="rules">
+              <details class="rule">
+                <summary><code>hold-v1</code> · rebuild space ahead</summary>
+                <p>
+                  If the forward gap is <strong>less than 0.95 × ideal gap</strong>, hold the
+                  eligible bus. The duration in seconds is:
+                </p>
+                <code class="formula"
+                  >min(120, max(1, (ideal gap − forward gap) × travel_seconds_per_segment ×
+                  2.5))</code
+                >
+                <p>
+                  The duration is at least 1 second and at most 120 seconds. With an ideal gap of 3
+                  stops, the trigger is a gap below 2.85 stops. Passengers can board during the
+                  hold.
+                </p>
+              </details>
+              <details class="rule">
+                <summary><code>alternating-express-v1</code> · recover a large gap</summary>
+                <p>
+                  If the forward gap <strong>exceeds 1.25 × ideal gap</strong>, the eligible bus
+                  serves the current stop, skips the next, and repeats this alternating pattern.
+                  With an ideal gap of 3 stops, activation requires a gap greater than 3.75 stops.
+                </p>
+                <p>
+                  Once activated, it rechecks at <strong>every arrival</strong>, including an
+                  arrival at a planned skipped stop. Normal service resumes when its forward gap is
+                  at most the ideal gap. Only riders for the next planned skipped stop transfer
+                  before each departure.
+                </p>
+                <p>
+                  <strong
+                    >Active alternating express continues after the final scheduled check until its
+                    gap recovers.</strong
+                  >
+                  Ending the check schedule stops new activations; it does not cancel an active
+                  recovery.
+                </p>
+              </details>
+              <details class="rule">
+                <summary><code>fixed-count-express-v1</code> · skip a calculated count</summary>
+                <p>
+                  If the forward gap <strong>exceeds 1.25 × ideal gap</strong>, the eligible bus
+                  serves the current stop and then skips this many consecutive stops:
+                </p>
+                <code class="formula">min(stops − 1, max(1, ceil(forward gap − ideal gap)))</code>
+                <p>
+                  <code>ceil</code> means round upward to the next integer. Riders for the skipped
+                  stops transfer before departure. The bus resumes normal service after that count,
+                  even if its gap has not recovered. An instruction already issued can finish after
+                  the final policy check.
+                </p>
+              </details>
+            </div>
+            <details>
+              <summary>Schedule fields, check limits, and exact endpoints</summary>
+              <p><span class="tag">FRAGMENT · REPLACE RECOVERY_POLICY</span></p>
+              <pre
+                class="code"
+                tabindex="0"
+                aria-label="Recovery policy fragment"
+              ><code>"recovery_policy": {
+  "rule": "hold-v1",
+  "start_seconds": 1500,
+  "end_seconds": 3600,
+  "check_every_seconds": 30
+}</code></pre>
+              <p>
+                <code>start_seconds</code> is from 0 through 604,800. <code>end_seconds</code> is
+                from the start time through 604,800. <code>check_every_seconds</code> is from 1
+                through 604,800. These are seconds, and fractions are allowed.
+              </p>
+              <p>
+                A check happens at the start, then after each interval while the check time is at or
+                before the end. The end is included
+                <strong>only when an interval lands on it</strong>. Start 100, end 220, interval 40
+                gives checks at 100, 140, 180, and 220. End 225 gives the same checks, with no extra
+                check at 225.
+              </p>
+              <p>
+                The file must satisfy
+                <code>(end_seconds − start_seconds) ÷ check_every_seconds ≤ 10,000</code>, allowing
+                at most 10,001 checks. A recovery check at the same time as a listed action runs
+                first. These checks are separate from the 1,000-intervention limit.
+              </p>
+              <p class="hint">
+                <code>rule</code> and all three schedule fields are required. The optional
+                <code>rule_explanation</code> documents the rule; it cannot customize the formula.
+                Version 1 does not support custom rules or multiple recovery policies in one file.
+              </p>
+            </details>
+          </section>
+
+          <section class="guide-section" id="sharing" aria-labelledby="sharing-title">
+            <span class="section-number">06 / Compare & share</span>
+            <h2 id="sharing-title">Preserve the recipe. Measure the cost.</h2>
+            <p>
+              Use <strong>Export scenario</strong> to copy the active run’s setup, seed, recovery
+              policy, all preset actions, and recorded manual interventions. It exports the active
+              run, even if a different preset is selected in the library. While reviewing history,
+              later retained interventions are included too.
+            </p>
+            <p>
+              The file recreates a run from time zero. It does not save the current clock,
+              passengers, observations, chart settings, playback speed, or page layout. Use
+              <strong>New window with this state</strong> to compare from the current point, and
+              <strong>Export observations CSV</strong> to keep measured results.
+            </p>
+            <h3>Prompts for a class comparison</h3>
+            <ul class="questions">
+              <li>
+                What happens to the bus behind the delayed bus? Follow both their gaps and their
+                queue waits.
+              </li>
+              <li>
+                Does a lower headway variation also reduce total passenger time? Count transfers and
+                people still waiting or riding.
+              </li>
+              <li>
+                What changes when you repeat with random arrivals? Keep the seed fixed for each pair
+                of strategies, then try several seeds.
+              </li>
+            </ul>
+            <p class="hint">
+              Completed-passenger averages exclude people who have not finished their trips. Headway
+              variation measures spatial gaps around the loop; it is not itself a passenger
+              waiting-time measure.
+            </p>
+            <details>
+              <summary>Sharing, backups, and import troubleshooting</summary>
+              <p>
+                <strong>Keep text backups.</strong> Imported presets are stored in this browser,
+                with a limit of 100 custom presets. Browser storage may be unavailable or cleared.
+                Sharing a custom lesson means sharing its complete JSON text or file; a built-in
+                scenario link does not include custom edits.
+              </p>
+              <p>
+                <strong>If an import fails:</strong> read the message, keep the text, and check that
+                you copied the entire file. Common causes are missing braces, trailing commas, a
+                misspelled field, an out-of-range number, or an action targeting a bus that does not
+                exist. A fragment from this guide is not a complete import.
+              </p>
+              <p>
+                <strong>File and run limits:</strong> scenario text is limited to 200,000
+                characters, with at most 1,000 interventions and a seven-day schedule. A run can
+                also stop sooner at 250,000 passenger arrivals or 250,000 served stops across all
+                buses. Export or review the results, then reset for another run.
+              </p>
+              <p>
+                <strong>After editing:</strong> import the complete revised text and save a new
+                preset. Loading it resets the experiment. Changing fields in Route setup also takes
+                effect only when you apply the setup and reset.
+              </p>
+            </details>
+          </section>
+        </div>
+      </div>
+    </main>
+    <footer class="site-footer">
+      Bus Bunching Lab · Scenario format version 1 · Explore the gaps. Measure the passenger cost.
+    </footer>
+    <script type="module" src="./scenario-guide.js?v=20261004a"></script>
+  </body>
+</html>
