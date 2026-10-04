@@ -2,6 +2,10 @@
 
 An interactive browser simulation for exploring why buses bunch and what dispatch interventions cost passengers. A delayed bus encounters more waiting riders, takes longer to board them, and falls further behind. The following bus finds smaller queues and catches up.
 
+## Credits
+
+Project author and direction: [MentalNomad](https://github.com/MentalNomad). Coding and testing were performed by GPT-6.1 Sol and GPT-6 Astra under the author's direction.
+
 ## Explore and teach
 
 - Watch buses, queues, and spacing on a circular route; adjust demand, travel, boarding, and ride lengths.
