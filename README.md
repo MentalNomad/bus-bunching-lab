@@ -8,17 +8,21 @@ Project author and direction: [MentalNomad](https://github.com/MentalNomad). Cod
 
 ## Explore and teach
 
-- Watch buses, queues, and spacing on a circular route; adjust demand, travel, boarding, and ride lengths.
-- Compare nine built-in scenarios, from a balanced baseline to random demand, selective holds, drop-off-only recovery, and announced skip patterns.
+- Start with the balanced fixed-arrival route; watch buses, queues, and spacing, then adjust demand, travel, boarding, ride lengths, and stopping/starting delays.
+- Compare historical and corrected built-in scenarios, from a balanced baseline to random demand, selective holds, drop-off-only recovery, and announced skip patterns.
 - Hold buses, slow a segment, skip stops, or restrict boarding while preserving accepted drop-offs; rewind deterministically and branch an experiment with a new intervention.
 - Configure automatic responses to the gaps both ahead of and behind each bus. Announced patterns can start after a lead-in, serve every Kth stop, and finish after a span, recovery, cancellation, or a time cap.
 - Open a paused copy of the current state, export observations as CSV, and import or export reusable scenario JSON.
 
 The [educator scenario guide](dist/scenario-guide.html) explains the format, units, recovery rules, and validation limits, with examples to copy or download. Scenario exports restart at time zero; current-state copies preserve passengers and history. Custom scenarios are stored in the current browser, so export them for backup and sharing.
 
-Charts show dwell, queue wait, and total system time. System time includes initial queue wait, boarding, riding, holds, transfers, and final debarking. Summary means include completed passengers only; current queue waits, repeated and unique passenger pass-overs, and passenger time accrued across completed and unfinished trips expose costs to people left waiting. Accrued time is displayed in passenger-minutes; CSV uses seconds and a separate count column. Whole-stop chart averages publish at departure and include complete passenger groups until at least the chosen window size is covered. Each-passenger mode uses exactly the last N observations.
+Charts show dwell, queue wait, and total system time. Hover or tap to inspect an actual observation and the trailing average at that time; arrow keys also work on a focused graph. Intermediate playback speeds include 240×, 480× and 960× before Max. System time includes initial queue wait, boarding, riding, holds, transfers, and final debarking. Summary means include completed passengers only; current queue waits, repeated and unique passenger pass-overs, and passenger time accrued across completed and unfinished trips expose costs to people left waiting. Accrued time is displayed in passenger-minutes; CSV uses seconds and a separate count column. Whole-stop chart averages publish at departure and include complete passenger groups until at least the chosen window size is covered. Each-passenger mode uses exactly the last N observations.
 
-Version 1 scenario files remain compatible. Version 2 adds two-gap conditions, drop-off-only service, announced patterns and explicit normal-service cancellation. New service modes preserve onboard destinations; legacy temporary express retains its transfer behavior. Automatic restrictions reserve an unrestricted bus, while manual interventions allow experiments with reduced coverage. Skipping saves passenger service time: buses still traverse every segment and there is no fixed stop overhead.
+Version 1 and 2 scenario files retain their original `legacy-v2` model and versioned rules. New format 3 scenarios explicitly select `ordered-v3`: deterministic circular neighbors, event-based temporal control, passenger-cost hold budgets, destination-specific coverage safeguards, and per-visit boarding allowances. Convert an old lesson with **Make a corrected copy & reset**; its original remains available. Corrected restrictions honor accepted drop-offs. Historical express keeps its transfer behavior.
+
+The **Complete passenger comparisons** section supports an inclusive finite arrival cutoff, bounded drain, matching full passenger birth records, and JSON/CSV passenger exports. Complete-cohort mean, p95 and maximum remain unavailable while any cohort passenger is unfinished. The cohort includes riders already waiting or aboard just before its boundary, plus later arrivals through the cutoff. Controls must start at or after that boundary. Keep an observation, load another policy with identical demand and boundaries, and compare after both drain.
+
+Optional stopping/starting delays (zero at skipped stops), fixed stop overhead, finite capacity and continuous no-overtaking are independent model choices; defaults remain zero overhead, unlimited seats and overtaking. The temporal controller conservatively keeps normal service when overtaking is disabled because joint road-and-door prediction is not implemented; manual controls still operate. Example values are illustrative, not empirically calibrated. The [design note](DESIGN.md) defines event order, prediction limitations, controller budgets, safeguards and compatibility. A separate local research package under `../research/controller-repair-2026-10-15/` contains frozen-source paired comparisons and independent review; it is not part of the static website.
 
 ## Run locally
 
@@ -58,7 +62,7 @@ In the GitHub repository, select **Settings → Pages → Source → GitHub Acti
 
 ## Model and source
 
-The event-driven model starts with empty queues and evenly spaced buses. It assumes unlimited capacity, allows overtaking, and models no traffic beyond manual delays. Service debarks riders before boarding; temporary express can require transfers. Seeded randomness supports repeatable comparisons. Recovery rules illustrate tradeoffs rather than optimized dispatch. Runs pause at seven simulated days, 250,000 arrivals, or 250,000 served stops; events sharing the last timestamp finish together.
+The event-driven model starts with empty queues and evenly spaced buses. Defaults use unlimited capacity, overtaking and no fixed stop overhead; corrected scenarios can change these independently. Service debarks riders before boarding. The historical express model can require transfers; corrected service plans protect accepted drop-offs. Seeded randomness supports repeatable comparisons. Recovery rules illustrate tradeoffs rather than optimized dispatch. Runs pause at seven simulated days, 250,000 arrivals, or 250,000 served stops; events sharing the last timestamp finish together.
 
 - `dist/`: editable static site, simulation, charts, scenario tools, and educator guide.
 - `tests/`: Node’s built-in test runner covers model, replay, chart, and scenario behavior.

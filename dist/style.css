@@ -72,6 +72,28 @@ main {
   gap: 20px;
   margin-bottom: 27px;
 }
+.current-scenario {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 12px 18px;
+  border: 2px solid #719246;
+  border-radius: 12px;
+  background: #eaf3d8;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.current-scenario span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.current-scenario strong {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+}
 h1 {
   font-family: 'Space Grotesk', sans-serif;
   font-size: clamp(24px, 2.2vw, 36px);
@@ -192,6 +214,17 @@ button.subtle {
   font-size: 12px;
   margin-bottom: 0;
 }
+.maneuver-delays {
+  row-gap: 6px;
+  margin-bottom: 14px;
+}
+.maneuver-delays label {
+  margin-bottom: 0;
+}
+.maneuver-delays .hint {
+  grid-column: 1/-1;
+  margin: 0;
+}
 .toolbar {
   display: flex;
   gap: 8px;
@@ -250,6 +283,17 @@ button.subtle {
   color: #74816b;
   flex-wrap: wrap;
   margin-bottom: 22px;
+}
+.route-icon-definitions {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.legend-icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
 }
 .bus-list {
   display: grid;
@@ -379,8 +423,63 @@ button.subtle {
 }
 canvas {
   display: block;
+  cursor: crosshair;
   width: 100%;
   height: 200px;
+}
+.chart-frame {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.chart-frame canvas:focus-visible {
+  outline: 2px solid #719246;
+  outline-offset: 3px;
+}
+.chart-inspection {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.chart-crosshair {
+  position: absolute;
+  width: 0;
+  border-left: 1px dashed #496456;
+}
+.chart-selected-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border: 2px solid;
+  border-radius: 50%;
+  background: white;
+}
+.chart-tooltip {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: max-content;
+  max-width: min(280px, 100%);
+  padding: 10px 13px;
+  border: 1px solid #a9bc9c;
+  border-radius: 9px;
+  background: #fcfff8;
+  box-shadow: 0 4px 18px #20373125;
+  color: #203731;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.chart-tooltip strong {
+  font-size: 13px;
+}
+.chart-tooltip small {
+  color: #586a50;
+}
+.chart-tooltip small:empty {
+  display: none;
 }
 .system-chart canvas {
   height: 240px;
@@ -452,8 +551,10 @@ footer {
 }
 .stop-label {
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  fill: #5f6e57;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: #5f6e57;
+  fill: currentColor;
 }
 .bus-label {
   font-weight: 700;
@@ -627,6 +728,46 @@ footer {
 }
 .scenario-panel #nextEvent {
   color: #567140;
+}
+.scenario-panel > div:first-child {
+  flex: 0 0 100%;
+}
+.scenario-panel > .scenario-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  flex: 0 0 100%;
+  min-width: 0;
+}
+.scenario-picker label {
+  flex: 1;
+}
+.scenario-panel .scenario-behavior {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 14px 17px;
+  border-left: 4px solid #719246;
+  border-radius: 5px;
+  background: #f1f6e8;
+  overflow-wrap: anywhere;
+}
+.scenario-behavior h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.scenario-behavior p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.scenario-panel > .scenario-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 100%;
+  min-width: 0;
 }
 .timeline {
   padding: 15px 0 0;
@@ -948,4 +1089,42 @@ button[hidden] {
   color: var(--green);
   font-weight: 600;
   text-underline-offset: 3px;
+}
+
+/* Comparison controls keep outcomes readable without hiding unfinished riders. */
+.cohort-numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 4px 20px;
+  margin: 12px 0;
+}
+.cohort-numbers p {
+  margin: 0;
+  font-size: 14px;
+}
+.decision-evidence {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow: auto;
+  font: 12px/1.6 monospace;
+  background: #f5f7f0;
+  padding: 12px;
+  border-radius: 8px;
+}
+#modelControls textarea {
+  width: 100%;
+  font: inherit;
+  resize: vertical;
+}
+#temporalFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px 16px;
+}
+#temporalFields label {
+  font-size: 12px;
+}
+.comparison-panel .toolbar {
+  flex-wrap: wrap;
 }

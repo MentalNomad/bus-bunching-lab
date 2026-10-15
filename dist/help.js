@@ -35,9 +35,13 @@ const text = {
     'Mean of the most recent observations, using the Trailing window setting. Whole-stop mode includes complete departed-stop groups, so it may exceed the requested count and remains unchanged until departure. Dwell averages use served stops; passenger averages use pickup or completion observations.',
 };
 const control = {
+  stoppingDelay:
+    'Extra seconds lost slowing into each served stop, before fixed overhead and doors. This lumped time penalty overlaps a hold. A genuinely skipped stop pays zero. Requires the corrected model.',
+  startingDelay:
+    'Extra seconds lost regaining speed after each served stop, added to the following road segment. Segment motion remains linear at its effective speed. Skipped stops pay zero. Initial buses already traveling pay no startup penalty.',
   stops: 'Number of stops around the loop. Buses begin evenly spaced. Stops are numbered from 1.',
   buses:
-    'Number of buses. Ideal spacing is stops divided by buses; buses have unlimited capacity and may overtake.',
+    'Number of buses. Ideal spacing is stops divided by buses; capacity and overtaking follow the explicit model assumptions in Route setup.',
   travel:
     'Normal travel time between adjacent stops. Express buses still travel every segment; they save stop service time.',
   rate: 'Passenger arrival rate at each stop, not across the whole route. Fixed demand arrives every 60 ÷ rate seconds; zero creates no passengers.',
@@ -68,9 +72,9 @@ const control = {
   slowValue:
     'Multiply remaining time on this segment if moving, or time on the next segment otherwise. A value of 3 means three times the normal remaining travel time.',
   expressValue:
-    'Number of consecutive stops to skip after the current service stop, or after the next stop if moving. Riders bound for skipped stops debark and queue here; passengers for skipped destinations do not board this bus.',
+    'Number of consecutive stops to skip after the current service stop, or after the next stop if moving. Historical runs transfer riders for skipped destinations. Corrected runs protect accepted drop-offs and restrict only new boarding.',
   dropoffEnd:
-    'End after a count of restricted stop locations, when spacing recovers, or when canceled. Every option also has a time cap. Recovery is checked on arrivals: ahead at most 110% and behind at least 90% of target.',
+    'End after a count of restricted stop locations, when spacing recovers, or when canceled. Every option also has a time cap. Recovery is checked on arrivals: historical runs require ahead at most 110% and behind at least 90% of target; corrected runs require only the forward gap at most 110%.',
   dropoffStops:
     'How many locations have no new boarding, including the current service stop or next stop if moving. All accepted riders keep their destination drop-offs.',
   dropoffLimit:
@@ -82,7 +86,7 @@ const control = {
   patternEvery:
     'After the lead-in, skip K minus 1 locations and serve one, repeatedly. K=2 alternates; K=3 skips two then serves one. Protected accepted drop-offs are extra stops with no boarding.',
   patternEnd:
-    'Choose a fixed span, recovery, or ongoing service until cancellation or the time cap. Recovery is checked on arrivals using both gaps; the cap always applies.',
+    'Choose a fixed span, recovery, or ongoing service until cancellation or the time cap. Historical recovery uses both gaps. Corrected recovery ends when the ordered forward gap is at most 110% of target, regardless of a large rear gap; the cap always applies.',
   patternStops:
     'Number of active pattern locations after the lead-in; counts both served and skipped locations. Two locations with K=3 make one consecutive two-stop skip block, then normal service resumes.',
   patternLimit:
@@ -204,12 +208,13 @@ export function setupHelp() {
     }
     for (const el of document.querySelectorAll('.chart-key')) {
       el.dataset.help =
-        'Dots show individual observations; the solid line shows the trailing average. Horizontal axis: simulated minutes. Vertical axis: seconds. Only the last 60 minutes are drawn; averages can include earlier observations.';
+        'Dots show individual observations; the solid line shows the trailing average. Horizontal axis: simulated minutes. Vertical axis: seconds. Only the last 60 minutes are drawn; averages can include earlier observations. Hover or tap a graph to inspect real observations and its average; left/right arrows work when the graph has focus. The nearest observation has its own timestamp; no individual values are interpolated.';
       el.tabIndex = 0;
     }
     for (const el of document.querySelectorAll('canvas')) {
-      el.dataset.help =
-        'Horizontal axis is simulated minutes; vertical axis is seconds. Dots show individual observations and the solid line shows the trailing average. The last 60 minutes are visible. All bus dwell graphs share one scale, and all bus wait graphs share another. A fixed ceiling can clip high observations visually.';
+      // The graph has its own live inspection readout. Keep the general help
+      // on its legend instead of obscuring inspection with a second tooltip.
+      el.removeAttribute('data-help');
       el.tabIndex = 0;
     }
     const count = document.getElementById('systemCount');

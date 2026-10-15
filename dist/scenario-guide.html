@@ -12,7 +12,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23203e35'/%3E%3Cpath d='M9 9h14v14H9z' fill='%23d5f184'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./scenario-guide.css?v=20261015a" />
+    <link rel="stylesheet" href="./scenario-guide.css?v=20261015c" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to the guide</a>
@@ -38,6 +38,15 @@
           its run; “Open a new lab tab” starts a separate experiment at time zero.
         </p>
       </div>
+      <div class="callout">
+        <p>
+          <strong>Choose the model revision explicitly.</strong> For new lessons with complete
+          passenger cohorts, optional physical assumptions and event control, use the
+          <a href="#corrected">format 3 examples and reference</a>. The format 1 and 2 examples
+          below reproduce historical behavior. An old recipe can be converted in the lab with
+          <strong>Make a corrected copy &amp; reset</strong>; its original is retained.
+        </p>
+      </div>
       <div class="guide-layout">
         <nav class="contents" aria-labelledby="contents-title">
           <h2 id="contents-title">In this guide</h2>
@@ -47,6 +56,7 @@
             <li><a href="#format">Set up the route</a></li>
             <li><a href="#timed-actions">Schedule timed actions</a></li>
             <li><a href="#recovery">Choose a recovery rule</a></li>
+            <li><a href="#corrected">Corrected model, safeguards &amp; complete comparisons</a></li>
             <li><a href="#sharing">Compare, export & share</a></li>
           </ol>
         </nav>
@@ -789,6 +799,405 @@
             </details>
           </section>
 
+          <section class="guide-section" id="corrected" aria-labelledby="corrected-title">
+            <span class="section-number">New / Scenario format 3</span>
+            <h2 id="corrected-title">Corrected control. Count every passenger.</h2>
+            <p>
+              New lessons can explicitly choose <code>ordered-v3</code>. Saved version 1 and 2
+              lessons keep <code>legacy-v2</code> behavior so earlier experiments remain repeatable.
+              The older rule descriptions above explain those historical lessons. Use
+              <strong>Make a corrected copy &amp; reset</strong> in the lab to create a separate
+              version 3 recipe; keep the original when comparing outcomes.
+            </p>
+            <p>
+              Start with a complete download, edit its text, then paste the whole file into
+              <strong>Import scenario</strong>. These examples use random demand and a common
+              minute-20 disruption, with an explicit arrival cutoff. All values are illustrative,
+              not calibrated observations or an optimized policy.
+            </p>
+            <ul>
+              <li>
+                <a href="./examples/corrected-holding.json" download
+                  >Bounded passenger-cost holding</a
+                >: event decisions, hold budgets, and a finite cohort.
+              </li>
+              <li>
+                <a href="./examples/corrected-boarding.json" download
+                  >Limited boarding with destination safeguards</a
+                >: five new riders per visit, protected drop-offs.
+              </li>
+              <li>
+                <a href="./examples/corrected-pattern.json" download
+                  >Announced pattern with eligible following service</a
+                >: advance notice and every-third-stop service.
+              </li>
+              <li>
+                <a href="./examples/corrected-physics.json" download
+                  >Optional seats, stop overhead, and no overtaking</a
+                >: change one assumption at a time.
+              </li>
+            </ul>
+            <details open>
+              <summary>What the corrected gaps and controller mean</summary>
+              <p>
+                Every bus has one immediate neighbor ahead and behind. For four buses together on a
+                12-stop loop, the forward gaps are 0, 0, 0, and 12, rather than four zeros. With
+                overtaking allowed, exact ties use bus ID order; the last tied ID owns the empty
+                arc. Without overtaking, saved physical road order retains the real leader across
+                the route boundary. A single bus has the full route gap in both directions.
+              </p>
+              <p>
+                In corrected service plans, <code>until_recovered</code> ends when the forward gap
+                is at most 110% of ideal spacing. The rear gap need not be normal: a tail bus may
+                have caught up even while a large gap remains behind it. A convoy leader's long arc
+                prevents a false recovery signal. Automatic holding leaves the front of every
+                coincident group free of new automatic holds, including partial groups whose forward
+                gap is still short. When an already held bus becomes that front, only automatic
+                holding is released; its manual holds and door work still finish.
+              </p>
+              <p>
+                The <code>temporal-cost-v3</code> rule evaluates stop arrivals and release
+                opportunities, including zero-dwell visits. At one timestamp, passenger arrivals,
+                bus arrivals and already-started door completions happen first, listed manual
+                actions next, one automatic batch next, then new door movements and departures. The
+                control window includes its start and excludes its end. At the end, only automatic
+                holds and restrictions are released; manual instructions retain their own limits.
+                Boarding or alighting underway always finishes.
+              </p>
+              <p>
+                Observed usable-service intervals are in seconds, and distinguish destinations. A
+                full, drop-off-only or incompatible express bus is not usable service for that
+                rider. Following-service estimates use current positions, known loads, seat
+                releases, service, holds and announced plans. Future boarding and dwell are unknown.
+                These are conditional estimates, not exact predictions; the controller consumes no
+                demand random numbers and falls back to normal service when evidence or credible
+                coverage is missing.
+              </p>
+              <p>
+                When overtaking is disabled, a reliable joint road-and-door forecast is unavailable.
+                The temporal controller conservatively keeps normal service in that model. Manual
+                interventions and physical no-overtaking still work. These comparisons measure the
+                physical assumption, rather than automatic recovery.
+              </p>
+              <p>
+                Holding weighs estimated queue-wait savings against extra onboard delay and rear
+                effects. Required service can absorb a requested hold. The lab separately records
+                requested seconds and realized extra automatic dwell. Action and visit limits, a
+                run-wide per-bus budget, and a cooldown prevent repeated unlimited delay. The
+                ordered leader remains free of new automatic holds. This heuristic can lose to
+                another strategy; compare passenger outcomes rather than assuming it is best.
+              </p>
+              <p>
+                Both predicted waiting benefit and onboard/rear-service costs use the additional
+                hold beyond known required service. A fully absorbed request has no predicted
+                spacing benefit, so it spends no budget or cooldown. A suppressed arrival can be
+                reconsidered after passenger service finishes. Once a hold is accepted, later events
+                reassess its remaining cost; only automatic time is released when the justification
+                disappears. Manual holds and boarding underway remain intact.
+              </p>
+              <p>
+                Holding starts only below 95% of ideal forward spacing with a positive temporal
+                deficit and credible follower. Service-saving responses require more than 110% of
+                ideal ahead and less than 90% behind. Automatic restrictions restore normal service
+                at 105% forward spacing, lost coverage, their span or expiry, or the control window
+                end. Manual until-recovered instructions use the separate 110% threshold. All
+                thresholds are illustrative.
+              </p>
+            </details>
+            <details>
+              <summary>Bounded boarding and passenger safeguards</summary>
+              <p>
+                A version 3 <code>boarding_limit</code> action specifies
+                <code>passengers</code> (integer 0–500), <code>stops</code> (1–400 locations, or
+                <code>null</code> for ongoing bounded service),
+                <code>until_recovered</code> (true/false), and <code>max_seconds</code> (1–604,800
+                from announcement). It permits that many new boarding starts at each visit,
+                including later arrivals. Boarding already underway is excluded from the new
+                allowance and finishes. FIFO applies among eligible riders; destination-ineligible
+                people retain their queue and original arrival clocks. All accepted drop-offs are
+                honored.
+              </p>
+              <p>
+                An <code>announced_skip</code> uses the existing lead-in and every-Kth-location
+                fields. New riders immediately follow the announced future service; existing riders
+                can still alight at nominally skipped stops. Under ordered-v3, a simple
+                <code>express</code> command also protects accepted destinations. Historical legacy
+                express retains its transfer behavior for reproducibility.
+              </p>
+              <p>
+                Automatic restrictions require plausible following service for each affected stop
+                and destination. Before actual pass-over, repeated-denial and queue/service-gap
+                safeguards can safely restore normal boarding. Denials count once per person per
+                actual bus visit and persist across new plans; capacity and policy denials are
+                separate. One unrestricted bus somewhere on the loop is not sufficient coverage.
+                Manual restrictions are not silently canceled. Overload, full buses or manual
+                commands can make the bound impossible; the decision log reports breaches and their
+                causes instead of discarding passengers or exceeding capacity.
+              </p>
+              <p>
+                Denial safeguard breaches count actual denied opportunities after a rider exceeds
+                the denial or queue-age bound. A separate observed service-gap counter counts
+                completed stop/destination service intervals longer than the configured limit, once
+                per interval. Long gaps can occur even without an intervention. The longest observed
+                gap also refers to completed intervals; an ongoing gap has not finished. Logged
+                manual and capacity context describes the observation and does not by itself
+                establish its cause.
+              </p>
+            </details>
+            <details>
+              <summary>Complete cohorts, cutoff and drain</summary>
+              <p>
+                The version 3 <code>observation</code> object declares
+                <code>cohort_start_seconds</code>, <code>arrival_cutoff_seconds</code>, and
+                <code>drain_max_seconds</code>. The cohort includes everybody present immediately
+                before the common start, including riders aboard and completions exactly at that
+                boundary, plus births through the cutoff. Choose the boundary before any treatment.
+                Whole journeys retain the initial queue wait and original birth clock.
+              </p>
+              <p>
+                A cutoff is inclusive: arrivals exactly at that second occur; later scheduled births
+                are canceled. New automatic control ends by the cutoff. Continue or use
+                <strong>Run to cutoff &amp; drain</strong> to finish the cohort, subject to the
+                configured drain and run limits. Manual active instructions finish or expire
+                normally. A null cutoff means continuous demand and no complete finite-cohort claim.
+              </p>
+              <p>
+                Observation exports include the clock horizon, cohort, created/completed/unfinished
+                counts, accrued passenger-seconds, queue and onboard costs, decision context, and
+                completeness. Full-cohort mean, p95 and maximum remain unavailable until everyone
+                finishes after cutoff. A resource-limited drain is incomplete; completed-only
+                averages do not replace full-cohort results. Match the full ordered birth records
+                (ID, time, origin and destination), not just a seed, across policies.
+              </p>
+              <p>
+                Independent population integrals check accounting: arrivals equal completed plus
+                queued plus onboard. Boarding counts aboard from its start and alighting remains
+                aboard until completion, each person once. Accrued passenger time includes people
+                still waiting or riding; spatial regularity is a secondary result.
+              </p>
+            </details>
+            <details>
+              <summary>Model assumptions and allowed values</summary>
+              <div class="table-wrap" tabindex="0" aria-label="Version 3 physical assumptions">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>Default / allowed values</th>
+                      <th>Meaning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>model.semantics</code></td>
+                      <td>Explicit: legacy-v2 or ordered-v3</td>
+                      <td>Versioned gap, recovery and service behavior.</td>
+                    </tr>
+                    <tr>
+                      <td><code>stop_overhead_seconds</code></td>
+                      <td>0; 0–120 seconds</td>
+                      <td>
+                        Once per served visit, even empty; before doors, overlapping holds. Fully
+                        skipped stops still traverse all road segments.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>stopping_delay_seconds</code></td>
+                      <td>0; 0–120 seconds</td>
+                      <td>
+                        Time lost entering a served stop, before overhead and door service. Zero for
+                        a bypass.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>starting_delay_seconds</code></td>
+                      <td>0; 0–120 seconds</td>
+                      <td>
+                        Time lost regaining speed after a served stop, added to the following road
+                        segment. Zero for a bypass.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>bus_capacity</code></td>
+                      <td>null (unlimited), or integer 1–500</td>
+                      <td>
+                        Seat reserved at boarding start, released after alighting finishes. Denied
+                        riders remain queued.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>allow_overtaking</code></td>
+                      <td>true or false</td>
+                      <td>
+                        False constrains continuous road trajectories through slowdowns and the
+                        route seam; blocked buses restart when leaders move. Several buses can serve
+                        a stop together; this is not a single-berth model.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>calibration_notes</code></td>
+                      <td>Text, at most 1,000 characters</td>
+                      <td>Record source/measurement procedure, or label inputs illustrative.</td>
+                    </tr>
+                    <tr>
+                      <td><code>cohort_start_seconds</code></td>
+                      <td>0; 0 through cutoff</td>
+                      <td>
+                        Common population boundary before treatment; at most 604,800 without cutoff.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>arrival_cutoff_seconds</code></td>
+                      <td>null, or 0–604,800</td>
+                      <td>Inclusive final demand timestamp; null retains continuous demand.</td>
+                    </tr>
+                    <tr>
+                      <td><code>drain_max_seconds</code></td>
+                      <td>86,400; 1–604,800</td>
+                      <td>
+                        Maximum extra drain duration, still subject to the seven-day total run clock
+                        and population/visit limits.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Stopping and starting are lumped time penalties, not a continuous acceleration
+                model. Stopping precedes overhead and doors and can overlap a hold. Starting extends
+                the next linear travel segment after doors and holds finish. A nominal skip with a
+                protected drop-off or manual stop hold is a served stop and pays both. Initial buses
+                already traveling pay no starting penalty. Older version 3 recipes can omit these
+                two fields; they mean zero. New exports include them explicitly. Optional nondefault
+                physics require ordered-v3. Compare one assumption at a time; seat limits, overhead
+                and road queues can change which intervention helps.
+              </p>
+            </details>
+            <details>
+              <summary>Temporal controller option reference</summary>
+              <p>
+                These camel-case keys live inside <code>recovery_policy.options</code>. Durations
+                are simulation seconds; counts below are integers. Omitted keys take the listed
+                defaults.
+              </p>
+              <div
+                class="table-wrap"
+                tabindex="0"
+                aria-label="Temporal controller options and bounds"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Option</th>
+                      <th>Default</th>
+                      <th>Allowed values / purpose</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>response</code></td>
+                      <td>hold</td>
+                      <td>hold, boarding, dropoff or pattern.</td>
+                    </tr>
+                    <tr>
+                      <td><code>decisionMode</code></td>
+                      <td>events</td>
+                      <td>
+                        events or polling; polling samples this same heuristic for cadence
+                        comparisons.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>pollSeconds</code></td>
+                      <td>30</td>
+                      <td>1–3,600; polling only.</td>
+                    </tr>
+                    <tr>
+                      <td><code>maxHold</code></td>
+                      <td>30</td>
+                      <td>0–3,600 per action; cannot exceed maxVisitHold.</td>
+                    </tr>
+                    <tr>
+                      <td><code>maxVisitHold</code></td>
+                      <td>45</td>
+                      <td>0–3,600 requested seconds per visit.</td>
+                    </tr>
+                    <tr>
+                      <td><code>repeatBudget</code></td>
+                      <td>90</td>
+                      <td>
+                        0–86,400 requested seconds per bus across the run; does not reset each stop.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>cooldownStops</code></td>
+                      <td>2</td>
+                      <td>Integer 0–400 intervening completed visits between eligible holds.</td>
+                    </tr>
+                    <tr>
+                      <td><code>benefitFactor</code></td>
+                      <td>1.2</td>
+                      <td>1–100 multiplier on estimated onboard and rear costs.</td>
+                    </tr>
+                    <tr>
+                      <td><code>targetSeconds</code></td>
+                      <td>0</td>
+                      <td>
+                        0–86,400; zero uses observed service headway or an illustrative fluid
+                        fallback.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>maxFollowerEta</code></td>
+                      <td>300</td>
+                      <td>1–86,400 maximum conditional following-service estimate.</td>
+                    </tr>
+                    <tr>
+                      <td><code>maxDenials</code></td>
+                      <td>2</td>
+                      <td>Integer 0–100 repeated actual denials per passenger.</td>
+                    </tr>
+                    <tr>
+                      <td><code>maxServiceGap</code></td>
+                      <td>600</td>
+                      <td>1–86,400 for eligible-service-gap and current queue-wait screening.</td>
+                    </tr>
+                    <tr>
+                      <td><code>boardingPassengers</code></td>
+                      <td>5</td>
+                      <td>Integer 1–500 new riders per visit for automatic boarding control.</td>
+                    </tr>
+                    <tr>
+                      <td><code>restrictionStops</code></td>
+                      <td>3</td>
+                      <td>Integer 1–400 stop locations.</td>
+                    </tr>
+                    <tr>
+                      <td><code>leadStops</code></td>
+                      <td>2</td>
+                      <td>Integer 0 through route stops minus 1 before pattern activation.</td>
+                    </tr>
+                    <tr>
+                      <td><code>serveEvery</code></td>
+                      <td>2</td>
+                      <td>Integer 2 through route stop count; serve each Kth pattern location.</td>
+                    </tr>
+                    <tr>
+                      <td><code>restrictionMaxSeconds</code></td>
+                      <td>600</td>
+                      <td>1–604,800 from announcement until expiry.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Corrected ordered polling rules are separate comparison heuristics. They use
+                repaired spatial gaps, bounded holds and accepted-drop-off protection; they do not
+                claim the destination-specific temporal safeguards of temporal-cost-v3.
+              </p>
+            </details>
+          </section>
+
           <section class="guide-section" id="sharing" aria-labelledby="sharing-title">
             <span class="section-number">06 / Compare & share</span>
             <h2 id="sharing-title">Preserve the recipe. Measure the cost.</h2>
@@ -893,8 +1302,9 @@
       </div>
     </main>
     <footer class="site-footer">
-      Bus Bunching Lab · Scenario formats 1 &amp; 2 · Explore the gaps. Measure the passenger cost.
+      Bus Bunching Lab · Scenario formats 1, 2 &amp; 3 · Explore the gaps. Measure the passenger
+      cost.
     </footer>
-    <script type="module" src="./scenario-guide.js?v=20261015a"></script>
+    <script type="module" src="./scenario-guide.js?v=20261015c"></script>
   </body>
 </html>

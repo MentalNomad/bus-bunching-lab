@@ -1,4 +1,5 @@
 export const builtInScenarioIds = [
+  'balanced-corrected',
   'balanced',
   'delay',
   'variance',
@@ -8,11 +9,16 @@ export const builtInScenarioIds = [
   'two-gap-holds',
   'dropoff',
   'announced-express',
+  'corrected-variance',
+  'temporal-recovery',
+  'temporal-boarding',
+  'temporal-pattern',
+  'physical-assumptions',
 ];
 export function scenarioFromSearch(search) {
   const id = new URLSearchParams(search).get('scenario');
   return {
-    id: builtInScenarioIds.includes(id) ? id : 'variance',
+    id: builtInScenarioIds.includes(id) ? id : 'balanced-corrected',
     invalid: id !== null && !builtInScenarioIds.includes(id),
   };
 }

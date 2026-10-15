@@ -1,0 +1,64 @@
+{
+  "format": "Bus Bunching Lab scenario",
+  "version": 3,
+  "notes": "Units: seconds from time zero; bus numbers start at 1. Model semantics is explicit. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. ordered-v3 until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Overhead precedes sequential door service and overlaps holds. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "name": "Event control � safeguarded announced skips",
+  "description": "12 stops, 4 buses and random demand. Bus 1 receives a 60-second hold at minute 20. From minute 25 through 120, a late bus may announce two normal future locations, then alternating service for three active locations, with a 600-second cap. Accepted drop-offs remain protected. Destination-specific follower and denial checks may suppress or end a plan. Demand ends at minute 120; compare complete passenger cohorts after drain.",
+  "setup": {
+    "stops": 12,
+    "buses": 4,
+    "travel_seconds_per_segment": 40,
+    "passengers_per_stop_per_minute": 3,
+    "arrival_pattern": "poisson",
+    "boarding_seconds_per_passenger": 2,
+    "debarking_seconds_per_passenger": 1,
+    "ride_length_stops": 4,
+    "ride_pattern": "random",
+    "random_seed": 42
+  },
+  "model": {
+    "semantics": "ordered-v3",
+    "stop_overhead_seconds": 0,
+    "bus_capacity": null,
+    "allow_overtaking": true,
+    "calibration_notes": "Illustrative teaching model; not empirically calibrated."
+  },
+  "observation": {
+    "cohort_start_seconds": 1200,
+    "arrival_cutoff_seconds": 7200,
+    "drain_max_seconds": 86400
+  },
+  "interventions": [
+    {
+      "at_seconds": 1200,
+      "bus": 1,
+      "action": "hold",
+      "seconds": 60
+    }
+  ],
+  "recovery_policy": {
+    "rule": "temporal-cost-v3",
+    "rule_explanation": "Event-based heuristic at stop arrivals and release opportunities. Use observed usable service and predicted eligible follower times, bounded onboard-cost versus queue-benefit holding, repeat budgets, destination-specific coverage and repeated-denial safeguards. Unknown or unsuitable coverage restores normal service. Predictions use current information, not future demand. This is illustrative and not an optimizer.",
+    "start_seconds": 1500,
+    "end_seconds": 7200,
+    "options": {
+      "response": "pattern",
+      "decisionMode": "events",
+      "pollSeconds": 30,
+      "maxHold": 30,
+      "maxVisitHold": 45,
+      "repeatBudget": 90,
+      "cooldownStops": 2,
+      "benefitFactor": 1.2,
+      "targetSeconds": 0,
+      "maxFollowerEta": 300,
+      "maxDenials": 2,
+      "maxServiceGap": 600,
+      "boardingPassengers": 5,
+      "restrictionStops": 3,
+      "leadStops": 2,
+      "serveEvery": 2,
+      "restrictionMaxSeconds": 600
+    }
+  }
+}

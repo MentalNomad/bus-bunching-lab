@@ -1,13 +1,16 @@
-import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261015a';
-import { Experiment, scenarios } from './experiment.js?v=20261015a';
-import { chartData, sharedScale } from './chart-data.js?v=20261015a';
-import { setupLayout } from './layout.js?v=20261015a';
-import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261015a';
-import { setupHelp } from './help.js?v=20261015a';
-import { scenarioFromSearch } from './scenario-links.js?v=20261015a';
-import { advanceMaxSpeed } from './playback.js?v=20261015a';
+import { setupModelControls } from './model-ui.js?v=20261015c';
+import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261015c';
+import { Experiment, scenarios } from './experiment.js?v=20261015c';
+import { chartData, sharedScale } from './chart-data.js?v=20261015c';
+import { updateChartInspection, clearChartInspection } from './chart-inspection.js?v=20261015c';
+import { setupLayout } from './layout.js?v=20261015c';
+import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261015c';
+import { setupHelp } from './help.js?v=20261015c';
+import { scenarioFromSearch } from './scenario-links.js?v=20261015c';
+import { advanceMaxSpeed, advanceTimedSpeed } from './playback.js?v=20261015c';
 loadCustomPresets();
 let refreshHelp = () => {};
+let modelControls;
 const $ = (id) => document.getElementById(id),
   colors = [
     '#3f7960',
@@ -35,11 +38,12 @@ let experiment = new Experiment({}, linkedScenario.id),
   lastDraw = 0;
 if (linkedScenario.invalid)
   $('message').textContent =
-    'Unknown scenario link. Loaded Random demand → bunching. Choose a built-in scenario from the library below.';
+    'Unknown scenario link. Loaded Balanced · fixed arrivals. Choose a built-in scenario from the library below.';
 const clock = (t) =>
   `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const duration = (t) => (t >= 60 ? `${(t / 60).toFixed(1)} min` : `${t.toFixed(0)} sec`);
 function initialize() {
+  clearChartInspection();
   $('bus').innerHTML = sim.buses
     .map((b) => `<option value="${b.id}">Bus ${b.id + 1}</option>`)
     .join('');
@@ -81,22 +85,31 @@ function reset(c = sim.c, scenarioId = experiment.scenarioId) {
   initialize();
 }
 function syncForm() {
+  $('currentScenarioName').textContent = experiment.definition.name;
   $('introHint').textContent =
-    experiment.scenarioId === 'variance' && sim.c.arrival === 'poisson'
+    ['variance', 'corrected-variance'].includes(experiment.scenarioId) &&
+    sim.c.arrival === 'poisson'
       ? 'Hit Run route: random passenger demand gradually disrupts even spacing. Let it run for several simulated laps.'
       : 'Hit Run route to try “' +
         experiment.definition.name +
         '”. Find its setup and scheduled dispatch in the Scenario Library below.';
-  for (const [k, v] of Object.entries(sim.c)) $('config').elements[k].value = v;
+  for (const [k, v] of Object.entries(sim.c))
+    if ($('config').elements[k]) $('config').elements[k].value = v ?? '';
+  modelControls?.sync();
+  for (const el of document.querySelectorAll('option[value="recovered"]'))
+    el.textContent =
+      sim.c.semantics === 'ordered-v3' ? 'When forward gap recovers' : 'When both gaps recover';
   $('scenario').value = experiment.scenarioId;
   $('scenario').dispatchEvent(new Event('change'));
-  const options = experiment.definition.policyOptions;
-  $('policyStatus').textContent =
-    experiment.definition.policy === 'two-gap'
-      ? `Active: ${options.ahead} gap ahead AND ${options.behind} gap behind → ${options.response.type === 'dropoff' ? 'drop-off-only' : options.response.type === 'pattern' ? 'announced pattern' : 'hold'}.`
-      : experiment.definition.policy
-        ? 'Active: the preset’s original version 1 recovery rule. The editor below creates a two-gap replacement.'
-        : 'Active: automatic dispatch is off.';
+  const isTwoGap = ['two-gap', 'ordered-two-gap'].includes(experiment.definition.policy);
+  const options = isTwoGap ? experiment.definition.policyOptions : null;
+  $('policyStatus').textContent = isTwoGap
+    ? `Active: ${options.ahead} gap ahead AND ${options.behind} gap behind → ${options.response.type === 'dropoff' ? 'drop-off-only' : options.response.type === 'pattern' ? 'announced pattern' : 'hold'}.`
+    : experiment.definition.policy
+      ? experiment.definition.policy === 'temporal-v3'
+        ? 'Active: temporal-cost-v3. See the event controller and passenger evidence below.'
+        : 'Active: versioned preset rule. The spatial editor below creates a polling comparison.'
+      : 'Active: automatic dispatch is off.';
   $('policyAction').value = options?.response.type || 'none';
   if (options) {
     $('gapAhead').value = options.ahead;
@@ -140,7 +153,7 @@ $('config').onsubmit = (e) => {
     const c = Object.fromEntries(new FormData(e.target));
     for (const k of ['stops', 'travel', 'buses', 'rate', 'board', 'debark', 'ride', 'seed'])
       c[k] = +c[k];
-    reset(c);
+    reset(modelControls.readConfig(c));
   } catch (e) {
     $('setupMessage').textContent =
       'Setup not applied. ' + e.message + ' The current run is unchanged.';
@@ -286,7 +299,7 @@ $('gapPolicy').onsubmit = (event) => {
     delete definition.policyOptions;
     delete definition.policySchedule;
     if (type !== 'none') {
-      definition.policy = 'two-gap';
+      definition.policy = sim.c.semantics === 'ordered-v3' ? 'ordered-two-gap' : 'two-gap';
       definition.policyOptions = {
         ahead: $('gapAhead').value,
         behind: $('gapBehind').value,
@@ -334,11 +347,31 @@ function route() {
     const a = (pos / n) * 2 * Math.PI - Math.PI / 2;
     return [cx + radius * Math.cos(a), cy + radius * Math.sin(a)];
   };
+  const stopLabel = (stop, waiting, x, y) => {
+    const size = n > 16 ? 10 : 15,
+      icon = size * 0.85,
+      gap = size * 0.25,
+      stopWidth = String(stop).length * size * 0.6,
+      waitWidth = String(waiting).length * size * 0.6;
+    const meeple = (left) =>
+      `<use href="#passenger-meeple-icon" x="${left}" y="${-icon / 2}" width="${icon}" height="${icon}"/>`;
+    const text = (value, left) =>
+      `<text x="${left}" y="0" dominant-baseline="central">${value}</text>`;
+    const stopPart = text(stop, 0),
+      waitPart = text(waiting, 0) + meeple(waitWidth + gap),
+      stopLength = stopWidth,
+      waitLength = waitWidth + gap + icon;
+    const label =
+      n > 16
+        ? `<g transform="translate(${-stopLength / 2},${-size * 0.55})">${stopPart}</g><g transform="translate(${-waitLength / 2},${size * 0.75})">${waitPart}</g>`
+        : `<g transform="translate(${-(stopLength + size + waitLength) / 2},0)">${stopPart}${text('·', stopLength + size * 0.4)}<g transform="translate(${stopLength + size},0)">${waitPart}</g></g>`;
+    return `<g transform="translate(${x},${y})" class="stop-label" style="font-size:${size}px">${label}</g>`;
+  };
   let svg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e4eadb" stroke-width="24"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#bdcbb2" stroke-width="1.5" stroke-dasharray="5 7"/>`;
   const selectedBus = sim.buses[+$('bus').value] || sim.buses[0];
   for (const s of sim.stops) {
     const [x, y] = xy(s.id),
-      [lx, ly] = xy(s.id, r + 34);
+      [lx, ly] = xy(s.id, r + (n <= 16 ? 46 : n > 20 && s.id % 2 ? 52 : 34));
     const plan = sim.stopPlan(selectedBus, s.id);
     const marker =
       plan === 'protected'
@@ -346,20 +379,22 @@ function route() {
         : plan === 'skip'
           ? `<path d="M${x - 8},${y - 8}l16,16m0,-16l-16,16" stroke="#9b4f45" stroke-width="3"/>`
           : '';
-    svg += `<g><title>Stop ${s.id + 1}: ${s.queue.length} waiting${plan === 'normal' ? '' : ` · Bus ${selectedBus.id + 1}: ${plan === 'protected' ? 'protected drop-off' : 'planned skip'}`}</title><circle cx="${x}" cy="${y}" r="${Math.min(15, 8 + s.queue.length / 10)}" class="svg-queue"/><circle cx="${x}" cy="${y}" r="5" class="svg-stop"/>${marker}<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" class="stop-label">${s.id + 1} · ${s.queue.length}</text></g>`;
+    svg += `<g><title>Stop ${s.id + 1}: ${s.queue.length} waiting${plan === 'normal' ? '' : ` · Bus ${selectedBus.id + 1}: ${plan === 'protected' ? 'protected drop-off' : 'planned skip'}`}</title><circle cx="${x}" cy="${y}" r="${Math.min(15, 8 + s.queue.length / 10)}" class="svg-queue"/><circle cx="${x}" cy="${y}" r="5" class="svg-stop"/>${marker}${stopLabel(s.id + 1, s.queue.length, lx, ly)}</g>`;
   }
   for (const b of sim.buses) {
     const [x, y] = xy(sim.position(b), r - 19 - (b.id % 3) * 5);
-    const held = b.phase !== 'travel' && b.holdUntil > sim.time,
+    const held = b.phase !== 'travel' && Math.max(b.holdUntil, b.autoHoldUntil ?? 0) > sim.time,
       express = b.express > 0 || b.pendingExpress > 0 || b.recoveryExpress;
     const badge = held
       ? 'HOLD'
       : b.servicePlan
-        ? b.servicePlan.type === 'dropoff'
-          ? 'DROP'
-          : b.servicePlan.phase !== 'active'
-            ? 'PLAN'
-            : `SKIP ${b.servicePlan.every}`
+        ? b.servicePlan.type === 'boarding'
+          ? 'LIMIT'
+          : b.servicePlan.type === 'dropoff'
+            ? 'DROP'
+            : b.servicePlan.phase !== 'active'
+              ? 'PLAN'
+              : `SKIP ${b.servicePlan.every}`
         : express
           ? b.recoveryExpress
             ? 'ALT EX'
@@ -381,10 +416,16 @@ function route() {
     .map((b) => {
       let state =
         b.phase === 'travel'
-          ? `To stop ${b.target + 1}`
-          : b.phase === 'hold'
-            ? `Holding · ${Math.ceil(Math.max(0, b.holdUntil - sim.time))}s left`
-            : `${b.service?.kind === 'off' ? 'Debarking' : 'Boarding'} · stop ${b.target + 1}`;
+          ? `${b.roadBlocked ? 'Following a slower bus · ' : ''}To stop ${b.target + 1}`
+          : b.phase === 'hold' && b.stoppingUntil > sim.time
+            ? `Slowing into stop · ${Math.ceil(b.stoppingUntil - sim.time)}s left`
+            : b.phase === 'hold' &&
+                b.overheadUntil > sim.time &&
+                Math.max(b.holdUntil, b.autoHoldUntil ?? 0) <= sim.time
+              ? `Stop overhead · ${Math.ceil(b.overheadUntil - sim.time)}s left`
+              : b.phase === 'hold'
+                ? `Holding · ${Math.ceil(Math.max(0, Math.max(b.holdUntil, b.autoHoldUntil ?? 0) - sim.time))}s left`
+                : `${b.service?.kind === 'off' ? 'Debarking' : 'Boarding'} · stop ${b.target + 1}`;
       if (b.recoveryExpress) state += ' · alternating express until recovered';
       if (b.holdUntil > sim.time && b.phase !== 'travel' && b.phase !== 'hold')
         state += ` · hold ${Math.ceil(b.holdUntil - sim.time)}s left`;
@@ -393,7 +434,7 @@ function route() {
       if (b.pendingHold) state += ` · hold ${b.pendingHold}s queued`;
       if (b.servicePlan) state += ' · ' + sim.serviceStatus(b);
       const gaps = sim.gaps(b);
-      return `<div class="bus-card"><span class="bus-dot" style="background:${colors[b.id]}"></span><div><strong>Bus ${b.id + 1} <span style="font-weight:400">· ${b.load.length + (b.service?.kind === 'on' ? 1 : 0)} riding</span></strong>${state}<small class="bus-gaps" tabindex="0" data-help="Distance to the nearest bus ahead and behind, in stop intervals. Target is stops divided by buses. Speeding this bus closes its forward gap and opens its rear gap; holding does the reverse.">Ahead ${gaps.ahead.toFixed(2)} · behind ${gaps.behind.toFixed(2)} · target ${(sim.c.stops / sim.c.buses).toFixed(2)}</small></div></div>`;
+      return `<div class="bus-card"><span class="bus-dot" style="background:${colors[b.id]}"></span><div><strong>Bus ${b.id + 1} <span style="font-weight:400">· ${b.load.length + (b.service?.kind === 'on' ? 1 : 0)} riding</span></strong>${state}<small class="bus-gaps" tabindex="0" data-help="Spatial distance in stop intervals. Corrected runs use immediate ordered neighbors, retaining a full circular gap at tied positions. Historical runs preserve the old nearest-distance calculation. Target is stops divided by buses. Speeding this bus closes its forward gap and opens its rear gap; holding does the reverse.">Ahead ${gaps.ahead.toFixed(2)} · behind ${gaps.behind.toFixed(2)} · target ${(sim.c.stops / sim.c.buses).toFixed(2)}</small></div></div>`;
     })
     .join('');
 }
@@ -481,6 +522,7 @@ function chart(canvas, data, view, color, axisMax) {
       (top + bottom) / 2,
     );
   }
+  updateChartInspection(canvas, data, view, { left, right, top, bottom, from, to, max, color });
 }
 function renderCharts() {
   const n = Math.max(1, Math.min(500, +$('window').value || 20)),
@@ -574,7 +616,7 @@ function render() {
     ['Passengers riding', s.onboard, 'Including boarding'],
     ['Trips completed', s.completed, `${s.created} passengers arrived`],
     ['Mean queue wait', duration(s.meanWait), 'Completed passengers'],
-    ['Mean system time', duration(s.meanSystem), 'Includes initial queue wait'],
+    ['Mean system time', duration(s.meanSystem), 'Completed only · includes initial wait'],
     ['Forced transfers', s.transfers, 'Express service cost'],
     ['Oldest current queue wait', duration(s.oldestWait), 'Longest current queue episode'],
     ['Mean current queue wait', duration(s.meanCurrentWait), 'Everyone waiting right now'],
@@ -589,6 +631,7 @@ function render() {
       'Completed + unfinished trips',
     ],
   ]);
+  modelControls?.render(!running);
   route();
   renderCharts();
   $('history').innerHTML = sim.log.length
@@ -649,7 +692,12 @@ function frame(now) {
       }
       sim = experiment.sim;
     } else {
-      advance(elapsed * +$('speed').value);
+      if (advanceTimedSpeed(experiment, elapsed * +$('speed').value)) {
+        setRunning(false);
+        $('message').textContent =
+          'Seven-day run limit reached. Export the data, then reset to start another run.';
+      }
+      sim = experiment.sim;
     }
     if (!running || now - lastDraw > 120) {
       render();
@@ -704,6 +752,32 @@ try {
 if (!scenarios.some((s) => s.id === experiment.scenarioId))
   scenarios.push({ ...experiment.definition, id: experiment.scenarioId, custom: true });
 setupScenarioLibrary(() => experiment);
+modelControls = setupModelControls({
+  getExperiment: () => experiment,
+  pause: () => setRunning(false),
+  render: () => {
+    sim = experiment.sim;
+    setRunning(false);
+    render();
+  },
+  install: (definition) => {
+    const replacement = new Experiment(definition.config, definition.id, definition);
+    const index = scenarios.findIndex((s) => s.id === definition.id);
+    if (index < 0) {
+      scenarios.push(definition);
+      const option = new Option('Custom · ' + definition.name, definition.id);
+      $('scenario').add(option);
+    } else {
+      scenarios[index] = definition;
+      const option = [...$('scenario').options].find((o) => o.value === definition.id);
+      if (option) option.textContent = 'Custom · ' + definition.name;
+    }
+    experiment = replacement;
+    sim = experiment.sim;
+    syncForm();
+    initialize();
+  },
+});
 setupLayout();
 syncForm();
 setRunning(false);
@@ -738,7 +812,7 @@ if (document.modelContext?.registerTool) {
         type: 'object',
         properties: {
           bus: { type: 'integer', minimum: 1 },
-          action: { enum: ['hold', 'slow', 'express', 'dropoff', 'pattern', 'normal'] },
+          action: { enum: ['hold', 'slow', 'express', 'dropoff', 'pattern', 'boarding', 'normal'] },
           value: {
             oneOf: [
               { type: 'number', exclusiveMinimum: 0 },
@@ -750,6 +824,7 @@ if (document.modelContext?.registerTool) {
                   maxSeconds: { type: 'number', minimum: 1, maximum: 604800 },
                   leadStops: { type: 'integer', minimum: 0 },
                   every: { type: 'integer', minimum: 2 },
+                  passengers: { type: 'integer', minimum: 0, maximum: 500 },
                 },
                 required: ['stops', 'untilRecovered', 'maxSeconds'],
                 additionalProperties: false,

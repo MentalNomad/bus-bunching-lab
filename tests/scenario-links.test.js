@@ -18,14 +18,14 @@ test('each built-in scenario link resolves to its complete original preset', () 
     assert.deepEqual(e.definition.events, scenarios.find((s) => s.id === id).events);
   }
 });
-test('no link and invalid scenario names use stochastic default; custom presets require text export', () => {
-  assert.deepEqual(scenarioFromSearch(''), { id: 'variance', invalid: false });
+test('no link and invalid scenario names use balanced default; custom presets require text export', () => {
+  assert.deepEqual(scenarioFromSearch(''), { id: 'balanced-corrected', invalid: false });
   for (const search of [
     '?scenario=nope',
     '?scenario=',
     '?scenario=custom-123',
     '?scenario=%3Cscript%3E',
   ])
-    assert.deepEqual(scenarioFromSearch(search), { id: 'variance', invalid: true });
+    assert.deepEqual(scenarioFromSearch(search), { id: 'balanced-corrected', invalid: true });
   assert.throws(() => scenarioUrl('https://example.com', 'custom-123'), /Export custom/);
 });

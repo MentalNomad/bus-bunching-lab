@@ -26,13 +26,15 @@ export function setupLayout() {
   const sections = [
     ['route', 'Live route & dispatch', workspace],
     ['summary', 'System summary', metrics],
+    ['log', 'Dispatch history', bottom.children[0]],
+    ['comparison', 'Passenger comparisons', document.querySelector('.comparison-panel')],
     ['chart-settings', 'Chart settings', settings],
     ['system', 'System chart', system],
     ['buses', 'Bus charts', buses],
-    ['log', 'Dispatch history', bottom.children[0]],
     ['definitions', 'Model definitions', bottom.children[1]],
     ['scenarios', 'Scenario Library', library],
   ];
+  let layoutChanged = false;
   function refresh() {
     for (const block of container.children) {
       block.querySelector('[data-move="up"]').disabled = block === container.firstElementChild;
@@ -87,6 +89,7 @@ export function setupLayout() {
       button.dataset.move = action;
       button.setAttribute('aria-label', `${text}: ${label}`);
       button.onclick = () => {
+        layoutChanged = true;
         if (action === 'first') container.prepend(block);
         else if (action === 'up' && block.previousElementSibling)
           container.insertBefore(block, block.previousElementSibling);
@@ -129,6 +132,18 @@ export function setupLayout() {
         block.append(document.createElement('div'));
         block.remove();
       }
+    }
+    if (!layoutChanged) {
+      const order = mobile.matches
+        ? [
+            'live-route',
+            'setup',
+            'log',
+            'dispatch',
+            ...sections.map(([id]) => id).filter((id) => !['route', 'log'].includes(id)),
+          ]
+        : sections.map(([id]) => id);
+      for (const id of order) container.append(container.querySelector(`[data-section="${id}"]`));
     }
     refresh();
     if (redraw) window.dispatchEvent(new Event('resize'));

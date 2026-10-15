@@ -12,9 +12,19 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23182e2c'/%3E%3Cpath d='M9 9h14v14H9z' fill='%23c6ef72'/%3E%3Cpath d='M11 12h10v5H11z' fill='%23182e2c'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="style.css?v=20261015a" />
+    <link rel="stylesheet" href="style.css?v=20261015f" />
   </head>
   <body>
+    <svg class="route-icon-definitions" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="passenger-meeple-icon" viewBox="0 0 16 16">
+          <path
+            d="M8 1.4a2 2 0 0 1 2 2c0 .6-.25 1.14-.67 1.5l1.66.6 2.83 2.66-1.45 1.5-1.6-1.2 1.1 5.8H8.8L8 11.2l-.8 3.06H4.13l1.1-5.8-1.6 1.2-1.45-1.5L5.01 5.5l1.66-.6A2 2 0 0 1 8 1.4Z"
+            fill="currentColor"
+          />
+        </symbol>
+      </defs>
+    </svg>
     <header>
       <div class="brand">
         <span class="mark">↻</span>
@@ -34,6 +44,10 @@
     <main>
       <section class="intro">
         <div>
+          <p class="current-scenario">
+            <span>Current scenario</span
+            ><strong id="currentScenarioName">Balanced · fixed arrivals</strong>
+          </p>
           <h1>
             <button
               id="titleExplainer"
@@ -45,8 +59,8 @@
             </button>
           </h1>
           <p id="introHint">
-            Hit Run route: random passenger demand gradually disrupts even spacing. Let it run for
-            several simulated laps.
+            Hit Run route to watch the balanced, fixed-arrival baseline. Introduce a delay or load a
+            guided scenario to explore bunching.
           </p>
         </div>
         <a class="scenario-jump" href="#scenarioLibrary">Explore guided scenarios ↓</a>
@@ -64,10 +78,9 @@
           stopped, and catches up. The result is buses arriving together, followed by a long gap.
         </p>
         <p>
-          The default experiment uses random arrivals and ride lengths, with seed 42, and no imposed
-          delay. Small variations are enough to set the feedback loop in motion. Watch the gaps,
-          queue waits, and total passenger time; the effect develops over simulated time rather than
-          immediately.
+          The default experiment uses fixed arrivals and ride lengths, with seed 42, and no imposed
+          delay. Start with this balanced baseline, then introduce a hold or try a random-demand
+          scenario. Watch the gaps, queue waits, and total passenger time as delays compound.
         </p>
         <p>
           Holding a following bus can rebuild space ahead of it. Sending a delayed bus express can
@@ -85,10 +98,15 @@
           <h2>Scenario library</h2>
           <p>Load a reproducible experiment, then run or step through its scheduled events.</p>
         </div>
-        <label>Scenario<select id="scenario"></select></label
-        ><button id="loadScenario">Load scenario & reset</button
-        ><button id="copy">New window with this state ↗</button>
-        <p id="scenarioDescription"></p>
+        <div class="scenario-picker">
+          <label>Scenario<select id="scenario"></select></label
+          ><button id="loadScenario">Load scenario & reset</button>
+        </div>
+        <section class="scenario-behavior" aria-labelledby="scenarioBehaviorTitle">
+          <h3 id="scenarioBehaviorTitle">Programmed behavior of the selected scenario</h3>
+          <p id="scenarioDescription"></p>
+        </section>
+        <div class="scenario-actions"><button id="copy">New window with this state ↗</button></div>
         <p id="nextEvent" class="hint"></p>
       </section>
       <div class="workspace">
@@ -121,15 +139,41 @@
             </div>
             <label
               >Travel per segment <span>seconds</span
-              ><input
-                name="travel"
-                type="number"
-                min="1"
-                max="600"
-                value="40"
-                required
-                step="any" /></label
-            ><label
+              ><input name="travel" type="number" min="1" max="600" value="40" required step="any"
+            /></label>
+            <div class="two maneuver-delays">
+              <label
+                >Stopping delay <span>seconds per served stop</span
+                ><input
+                  name="stoppingDelay"
+                  type="number"
+                  min="0"
+                  max="120"
+                  value="0"
+                  step="any"
+                  required
+              /></label>
+              <label
+                >Starting delay <span>seconds after a served stop</span
+                ><input
+                  name="startingDelay"
+                  type="number"
+                  min="0"
+                  max="120"
+                  value="0"
+                  step="any"
+                  required
+              /></label>
+              <p class="hint">
+                Slowing into a stop and regaining speed afterward. Skipped stops incur neither
+                penalty.
+                <span id="legacyManeuverHint" hidden
+                  >Historical lessons need a corrected copy to use these controls.
+                  <button type="button" id="enableManeuvers">Enable these controls</button></span
+                >
+              </p>
+            </div>
+            <label
               >Arrivals per stop <span>passengers / minute</span
               ><input
                 name="rate"
@@ -200,6 +244,9 @@
                 <option value="30">30×</option>
                 <option value="60">60×</option>
                 <option value="120">120×</option>
+                <option value="240">240×</option>
+                <option value="480">480×</option>
+                <option value="960">960×</option>
                 <option value="max">Max</option>
               </select></label
             >
@@ -226,7 +273,11 @@
             </div>
           </div>
           <div class="legend">
-            <span>○ Stop · label shows queue</span><span>Colored marker · bus number</span
+            <span
+              >Stop number · waiting passengers
+              <svg class="legend-icon" aria-hidden="true" focusable="false">
+                <use href="#passenger-meeple-icon" /></svg></span
+            ><span>Colored marker · bus number</span
             ><span>Clockwise ↻ · HOLD / DROP / PLAN / SKIP badges show dispatch state</span>
           </div>
           <p id="planLegend" class="hint plan-legend"></p>
@@ -268,8 +319,8 @@
           <div class="intervention">
             <h3>Temporary express</h3>
             <p>
-              Skip stops after this service stop (or the next if moving). Riders bound for skipped
-              stops transfer here.
+              Skip stops after this service stop (or the next if moving). Historical runs transfer
+              affected riders. Corrected runs protect every accepted drop-off.
             </p>
             <label
               >Stops to skip<input
@@ -524,11 +575,12 @@
           <details>
             <summary>Model & metric definitions</summary>
             <p>
-              Unlimited bus capacity, overtaking allowed, no traffic except manual delays. All buses
-              start evenly spaced in motion on an empty route. Boarding and debarking are
-              sequential; arrivals continue during both. Fixed arrivals are synchronized across
-              stops; stochastic arrivals have independent exponential intervals. Random rides are
-              uniform integers from 1 to min(2 × configured length − 1, stops − 1).
+              Defaults are unlimited capacity, overtaking allowed and no fixed overhead. Corrected
+              runs can change these assumptions in Route setup; the active revision is displayed
+              there. All buses start evenly spaced in motion on an empty route. Boarding and
+              debarking are sequential; arrivals continue during both. Fixed arrivals are
+              synchronized across stops; stochastic arrivals have independent exponential intervals.
+              Random rides are uniform integers from 1 to min(2 × configured length − 1, stops − 1).
             </p>
             <p>
               Dwell is measured on departure and includes service and holds. Wait is sampled at each
@@ -571,6 +623,6 @@
       </div>
     </main>
     <footer>BUS BUNCHING LAB <span>Explore the gaps. Measure the passenger cost.</span></footer>
-    <script type="module" src="app.js?v=20261015a"></script>
+    <script type="module" src="app.js?v=20261015e"></script>
   </body>
 </html>

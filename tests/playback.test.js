@@ -2,7 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Experiment } from '../dist/experiment.js';
 import { MAX_SIMULATION_SECONDS } from '../dist/engine.js';
-import { advanceMaxSpeed } from '../dist/playback.js';
+import { advanceMaxSpeed, advanceTimedSpeed } from '../dist/playback.js';
+
+function assertSameState(actual, expected) {
+  const left = structuredClone(actual),
+    right = structuredClone(expected);
+  // Only the new independent diagnostic integrals sum across rendering-chunk
+  // boundaries. Allow roundoff there; all pre-existing state stays exact.
+  for (const key of ['integratedPassengerTime', 'integratedQueueTime', 'integratedOnboardTime']) {
+    const tolerance = 1e-8 + 1e-12 * Math.max(Math.abs(left[key]), Math.abs(right[key]));
+    assert(Math.abs(left[key] - right[key]) <= tolerance, `${key} differs beyond roundoff`);
+    delete left[key];
+    delete right[key];
+  }
+  assert.deepEqual(left, right);
+}
 
 test('Max advances in short bursts and yields even with a coarse clock', () => {
   const experiment = new Experiment({ rate: 0 });
@@ -28,11 +42,11 @@ test('Max preserves seeded demand, scheduled recovery, interventions and replay'
   }
   for (let frame = 0; frame < 4; frame++) advanceMaxSpeed(fast, () => 0);
   reference.advanceTo(fast.sim.time);
-  assert.deepEqual(structuredClone(fast.sim), structuredClone(reference.sim));
+  assertSameState(fast.sim, reference.sim);
   const expected = structuredClone(fast.sim);
   fast.seek(120);
   fast.advanceTo(reference.sim.time);
-  assert.deepEqual(structuredClone(fast.sim), expected);
+  assertSameState(fast.sim, expected);
 });
 
 test('Max reaches the exact time limit from a fractional time and then stops', () => {
@@ -61,4 +75,20 @@ test('Max propagates passenger and stop limits so playback can pause safely', ()
   frequent.sim.buses[0].visits = 250000;
   assert.throws(() => advanceMaxSpeed(frequent, () => 0), /Stop visit limit reached/);
   assert.equal(frequent.sim.buses[0].visits, 250000);
+});
+
+test('fixed multipliers stop at their fractional target and yield without accumulating backlog', () => {
+  const experiment = new Experiment({ rate: 0 });
+  assert.equal(
+    advanceTimedSpeed(experiment, 3.75, () => 0),
+    false,
+  );
+  assert.equal(experiment.sim.time, 3.75);
+  let clock = 0;
+  advanceTimedSpeed(experiment, 192, () => clock++);
+  assert.equal(experiment.sim.time, 11.75, 'yields after eight short chunks under load');
+  advanceTimedSpeed(experiment, 0.5, () => 0);
+  assert.equal(experiment.sim.time, 12.25, 'a later frame does not inherit missed time');
+  for (const seconds of [NaN, Infinity, -1])
+    assert.throws(() => advanceTimedSpeed(experiment, seconds));
 });

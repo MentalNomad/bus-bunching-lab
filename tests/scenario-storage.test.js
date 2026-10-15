@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setupScenarioLibrary } from '../dist/scenario-ui.js';
-import { Experiment, scenarios } from '../dist/experiment.js?v=20261015a';
-import { serializeScenario } from '../dist/scenario-format.js?v=20261015a';
+import { Experiment, scenarios } from '../dist/experiment.js?v=20261015c';
+import { serializeScenario } from '../dist/scenario-format.js?v=20261015c';
 
 // Exercise the public save button with only the DOM methods used by the library.
 // Browser windows have separate scenario arrays but share the same local storage.

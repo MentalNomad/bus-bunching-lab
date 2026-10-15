@@ -1,10 +1,11 @@
-import { scenarios } from './experiment.js?v=20261015a';
+import { scenarios } from './experiment.js?v=20261015c';
 import {
   parseScenario,
   serializeScenario,
   ruleDescriptions,
-} from './scenario-format.js?v=20261015a';
-import { builtInScenarioIds, scenarioUrl } from './scenario-links.js?v=20261015a';
+  correctedRuleDescriptions,
+} from './scenario-format.js?v=20261015c';
+import { builtInScenarioIds, scenarioUrl } from './scenario-links.js?v=20261015c';
 const storageKey = 'bus-lab-custom-scenarios-v1';
 function readCustomPresets() {
   const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -36,6 +37,7 @@ export function loadCustomPresets() {
 export function setupScenarioLibrary(getExperiment) {
   const library = document.querySelector('.scenario-panel'),
     select = document.getElementById('scenario');
+  const actions = library.querySelector('.scenario-actions');
   function refresh() {
     const value = getExperiment().scenarioId;
     select.replaceChildren();
@@ -57,7 +59,7 @@ export function setupScenarioLibrary(getExperiment) {
   linkStatus.id = 'scenarioLinkStatus';
   linkStatus.setAttribute('role', 'status');
   linkStatus.setAttribute('aria-live', 'polite');
-  library.insertBefore(linkButton, document.getElementById('scenarioDescription'));
+  actions.append(linkButton);
   library.append(linkStatus);
   function updateLink() {
     linkButton.disabled = !builtInScenarioIds.includes(select.value);
@@ -76,7 +78,7 @@ export function setupScenarioLibrary(getExperiment) {
   guideLink.rel = 'noopener';
   guideLink.textContent = 'Scenario writing guide ↗';
   guideLink.setAttribute('aria-label', 'Scenario writing guide (opens in a new tab)');
-  library.insertBefore(guideLink, document.getElementById('scenarioDescription'));
+  actions.append(guideLink);
   linkButton.onclick = async () => {
     try {
       const url = scenarioUrl(location.href, select.value);
@@ -114,7 +116,10 @@ export function setupScenarioLibrary(getExperiment) {
     message = dialog.querySelector('#scenarioTextMessage'),
     save = dialog.querySelector('#saveScenarioText'),
     copy = dialog.querySelector('#copyScenarioText');
-  for (const [rule, description] of Object.entries(ruleDescriptions)) {
+  for (const [rule, description] of Object.entries({
+    ...ruleDescriptions,
+    ...correctedRuleDescriptions,
+  })) {
     const p = document.createElement('p'),
       strong = document.createElement('strong');
     strong.textContent = rule + ': ';
@@ -170,7 +175,7 @@ export function setupScenarioLibrary(getExperiment) {
     button.id = mode + 'Scenario';
     button.textContent = label;
     button.onclick = () => open(mode, button);
-    library.insertBefore(button, document.getElementById('scenarioDescription'));
+    actions.append(button);
   }
   copy.onclick = async () => {
     try {

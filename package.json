@@ -5,8 +5,8 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "start": "python -m http.server 8080 --bind 127.0.0.1 --directory dist",
-    "format": "prettier --write dist tests .github README.md package.json .prettierrc.json",
-    "format:check": "prettier --check dist tests .github README.md package.json .prettierrc.json"
+    "format": "prettier --write dist tests .github README.md DESIGN.md package.json .prettierrc.json",
+    "format:check": "prettier --check dist tests .github README.md DESIGN.md package.json .prettierrc.json"
   },
   "devDependencies": {
     "prettier": "3.9.9"

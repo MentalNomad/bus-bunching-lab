@@ -8,11 +8,14 @@ export function normalizeServiceAction(type, value, config) {
     if (value !== 1) throw Error('Normal service takes the value 1.');
     return 1;
   }
-  if (!['dropoff', 'pattern'].includes(type)) throw Error('Unknown service action.');
+  if (!['dropoff', 'pattern', 'boarding'].includes(type)) throw Error('Unknown service action.');
+  if (type === 'boarding' && config.semantics !== 'ordered-v3')
+    throw Error('Boarding allowances require ordered-v3 semantics.');
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw Error('Service instructions must be an object.');
   const fields = ['stops', 'untilRecovered', 'maxSeconds'];
   if (type === 'pattern') fields.push('leadStops', 'every');
+  if (type === 'boarding') fields.push('passengers');
   if (Object.keys(value).some((key) => !fields.includes(key)))
     throw Error('Unknown service instruction field.');
   if (fields.some((key) => !Object.hasOwn(value, key)))
@@ -42,5 +45,10 @@ export function normalizeServiceAction(type, value, config) {
     if (!Number.isInteger(value.every) || value.every < 2 || value.every > config.stops)
       throw Error('Pattern must serve every 2nd through route-count stop.');
   }
+  if (
+    type === 'boarding' &&
+    (!Number.isInteger(value.passengers) || value.passengers < 0 || value.passengers > 500)
+  )
+    throw Error('Boarding allowance must be 0–500 new passengers per visit.');
   return Object.fromEntries(fields.map((key) => [key, value[key]]));
 }
