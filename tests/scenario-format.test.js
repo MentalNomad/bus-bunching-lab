@@ -62,7 +62,7 @@ test('invalid import fields, unknown rules, numbers, actions and versions are re
   const e = new Experiment(),
     valid = JSON.parse(serializeScenario(e.definition, e.config));
   const mutations = [
-    (d) => (d.version = 2),
+    (d) => (d.version = 3),
     (d) => (d.setup.random_seed = 0),
     (d) => (d.setup.extra = 1),
     (d) => (d.name = ''),

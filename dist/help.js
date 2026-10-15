@@ -11,6 +11,14 @@ const text = {
     'Arithmetic mean of final debarking time minus first arrival time for completed passengers. Includes initial queue wait, boarding, riding, onboard holds, transfer queues, and debarking. This is the whole-run mean, not the chart’s trailing average.',
   'Forced transfers':
     'Number of times passengers are put off a bus because their destination will be skipped. Each must queue and board a later bus. One passenger can transfer more than once.',
+  'Oldest current queue wait':
+    'Longest uninterrupted queue episode among everyone currently waiting: now minus entry into this queue. A transfer starts a new episode. Excludes anyone already boarding. Shows delays that completed-trip averages cannot yet include.',
+  'Mean current queue wait':
+    'Mean elapsed wait in the current queue episode for everyone waiting now, including transfer queues. Excludes boarding. Unlike Mean queue wait, this describes unfinished waiting passengers, not completed trips.',
+  'Passed-over passengers':
+    'One count per waiting passenger per restricted bus visit, including a bus skipping the stop entirely. The same person can be counted on multiple visits. The unique count counts each affected passenger once. These are boarding restrictions, not necessarily forced transfers.',
+  'Passenger time accrued':
+    'Sum of completed trip times plus time since first arrival for every unfinished passenger, including boarding. Shown in passenger-minutes (p-min); CSV uses passenger-seconds. Compare at matching clock times and demand. This is total passenger time already spent, not an average or a prediction of final trip duration.',
   'HEADWAY VARIATION':
     'Spatial gap standard deviation divided by the ideal gap, shown as a percentage. Ideal gap = stops ÷ buses. 0% means evenly spaced; larger values mean less even spacing. This measures spacing around the route, not minutes between arrivals or passenger welfare.',
   'Total system time per completed passenger':
@@ -61,6 +69,44 @@ const control = {
     'Multiply remaining time on this segment if moving, or time on the next segment otherwise. A value of 3 means three times the normal remaining travel time.',
   expressValue:
     'Number of consecutive stops to skip after the current service stop, or after the next stop if moving. Riders bound for skipped stops debark and queue here; passengers for skipped destinations do not board this bus.',
+  dropoffEnd:
+    'End after a count of restricted stop locations, when spacing recovers, or when canceled. Every option also has a time cap. Recovery is checked on arrivals: ahead at most 110% and behind at least 90% of target.',
+  dropoffStops:
+    'How many locations have no new boarding, including the current service stop or next stop if moving. All accepted riders keep their destination drop-offs.',
+  dropoffLimit:
+    'Maximum simulated seconds from announcement, including travel and any lead-in. The instruction ends at this clock time even between stops. Maximum seven days.',
+  dropoff:
+    'Admit no new passengers temporarily, while honoring all onboard drop-offs. A passenger already boarding finishes. Waiting passengers remain for other buses.',
+  patternLead:
+    'Upcoming stop locations served normally after the announcement stop. If moving, the next service stop is the announcement anchor. Boarding already checks future destination compatibility during the lead-in.',
+  patternEvery:
+    'After the lead-in, skip K minus 1 locations and serve one, repeatedly. K=2 alternates; K=3 skips two then serves one. Protected accepted drop-offs are extra stops with no boarding.',
+  patternEnd:
+    'Choose a fixed span, recovery, or ongoing service until cancellation or the time cap. Recovery is checked on arrivals using both gaps; the cap always applies.',
+  patternStops:
+    'Number of active pattern locations after the lead-in; counts both served and skipped locations. Two locations with K=3 make one consecutive two-stop skip block, then normal service resumes.',
+  patternLimit:
+    'Maximum simulated seconds from announcement, including the anchor and lead-in. It can restore normal service before the skip pattern begins.',
+  pattern:
+    'Announce a future service pattern. Every accepted drop-off is honored, and new riders board only if their first upcoming destination visit will be served. No forced transfers are created by this mode.',
+  normal:
+    'Cancel this bus’s drop-off-only, announced pattern and legacy express restrictions. Existing holds and slowdowns remain. It also cancels announced patterns that have not started yet.',
+  gapAhead:
+    'Condition on distance to the nearest bus ahead in the direction of travel. Small is strictly below the small threshold; large is strictly above the large threshold. Any ignores this direction.',
+  gapBehind:
+    'Condition on distance to the nearest following bus. Both chosen gap conditions must match. A large forward gap with a small rear gap is a candidate for service-time savings.',
+  gapSmall:
+    'Small-gap threshold as a percentage of target spacing (stops divided by buses). Equality does not count as small. It must be below the large threshold.',
+  gapLarge:
+    'Large-gap threshold as a percentage of target spacing. Equality does not count as large. Thresholds are experimental policy choices, not optimized values.',
+  policyAction:
+    'Automatic checks use the response settings above, act at service stops at most once per visit and avoid active holds or restrictions. Service restrictions reserve one unrestricted bus; holds can affect other eligible buses.',
+  policyStart:
+    'When automatic checks begin, in simulated minutes from zero. Checks include this time.',
+  policyEnd:
+    'Last possible automatic check, in simulated minutes. Ending checks prevents new activations; active restrictions finish by their own ending rule and time cap.',
+  policyInterval:
+    'Seconds between automatic checks. At most 10,001 checks per scenario. Apply dispatch & reset installs the new policy at time zero and retains the setup and recorded interventions.',
   timeline:
     'Review any earlier simulated second. Rewinding pauses playback. A new manual intervention replaces later manual interventions; scheduled preset interventions remain.',
   back: 'Replay from the same seed to one simulated minute earlier, restoring passengers, observations, and dispatch state.',
@@ -75,7 +121,7 @@ const control = {
   exportScenario:
     'Export the active scenario with the applied setup and recorded manual interventions, starting from time zero. Includes future preset events, but not current passengers or chart settings.',
   importScenario:
-    'Paste a version 1 scenario, validate it, and save it as a custom preset in this browser. Choose Load scenario & reset to run it.',
+    'Paste a version 1 or 2 scenario, validate it, and save it as a custom preset in this browser. Choose Load scenario & reset to run it.',
   copyScenarioLink:
     'Copy a link to the selected built-in preset. It opens that preset’s original settings and scheduled events, paused at time zero. Use Export scenario for custom presets, edited settings or manual interventions.',
 };

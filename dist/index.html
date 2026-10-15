@@ -12,7 +12,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23182e2c'/%3E%3Cpath d='M9 9h14v14H9z' fill='%23c6ef72'/%3E%3Cpath d='M11 12h10v5H11z' fill='%23182e2c'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="style.css?v=20261004a" />
+    <link rel="stylesheet" href="style.css?v=20261015a" />
   </head>
   <body>
     <header>
@@ -227,8 +227,9 @@
           </div>
           <div class="legend">
             <span>○ Stop · label shows queue</span><span>Colored marker · bus number</span
-            ><span>Clockwise service ↻ · HOLD / EX / ALT EX badges show dispatch state</span>
+            ><span>Clockwise ↻ · HOLD / DROP / PLAN / SKIP badges show dispatch state</span>
           </div>
+          <p id="planLegend" class="hint plan-legend"></p>
           <div class="bus-list" id="busList"></div>
         </section>
         <aside class="panel dispatch">
@@ -279,6 +280,175 @@
                 value="2" /></label
             ><button id="express">Go temporary express</button>
           </div>
+          <details class="intervention" id="dropoffControls">
+            <summary>Drop-off-only service</summary>
+            <p>
+              Keep every accepted drop-off; leave new riders for another bus. Starts here if
+              stopped, or at the next stop.
+            </p>
+            <label
+              >Drop-off-only ending<select id="dropoffEnd">
+                <option value="fixed">After a stop count</option>
+                <option value="recovered">When both gaps recover</option>
+                <option value="ongoing">Until canceled or time cap</option>
+              </select></label
+            >
+            <label
+              >Restricted stop locations<input
+                id="dropoffStops"
+                type="number"
+                min="1"
+                max="400"
+                step="1"
+                value="3"
+            /></label>
+            <label
+              >Drop-off-only time cap <span>seconds from announcement</span
+              ><input id="dropoffLimit" type="number" min="1" max="604800" value="600" step="any"
+            /></label>
+            <button id="dropoff">Start drop-off-only service</button>
+          </details>
+          <details class="intervention" id="patternControls">
+            <summary>Announced skip pattern</summary>
+            <p>
+              Announce at this service stop, or the next if moving. Serve the lead-in stops, then
+              skip K−1 and serve one. Honor every accepted drop-off; boarding immediately respects
+              the announced plan.
+            </p>
+            <div class="two">
+              <label
+                >Lead-in stop locations<input
+                  id="patternLead"
+                  type="number"
+                  min="0"
+                  max="11"
+                  step="1"
+                  value="6"
+              /></label>
+              <label
+                >Serve every Kth stop<input
+                  id="patternEvery"
+                  type="number"
+                  min="2"
+                  max="12"
+                  step="1"
+                  value="3"
+              /></label>
+            </div>
+            <label
+              >Pattern ending<select id="patternEnd">
+                <option value="fixed">After a stop count</option>
+                <option value="recovered">When both gaps recover</option>
+                <option value="ongoing">Until canceled or time cap</option>
+              </select></label
+            >
+            <label
+              >Pattern stop locations <span>after the lead-in</span
+              ><input id="patternStops" type="number" min="1" max="400" step="1" value="12"
+            /></label>
+            <label
+              >Pattern time cap <span>seconds from announcement</span
+              ><input id="patternLimit" type="number" min="1" max="604800" value="1800" step="any"
+            /></label>
+            <button id="pattern">Announce skip pattern</button>
+          </details>
+          <button id="normal" class="restore-service">Restore normal service for this bus</button>
+          <details class="intervention" id="policyControls">
+            <summary>Automatic two-gap dispatch</summary>
+            <p id="policyStatus" class="hint"></p>
+            <p>
+              Both conditions must match. Gaps use stop intervals; target = stops ÷ buses. Changes
+              apply on reset.
+            </p>
+            <form id="gapPolicy">
+              <div class="two">
+                <label
+                  >Gap ahead<select id="gapAhead">
+                    <option value="large">Large</option>
+                    <option value="small">Small</option>
+                    <option value="any">Any</option>
+                  </select></label
+                >
+                <label
+                  >Gap behind<select id="gapBehind">
+                    <option value="small">Small</option>
+                    <option value="large">Large</option>
+                    <option value="any">Any</option>
+                  </select></label
+                >
+                <label
+                  >Small below <span>% of target</span
+                  ><input
+                    id="gapSmall"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="any"
+                    value="90"
+                    required
+                /></label>
+                <label
+                  >Large above <span>% of target</span
+                  ><input
+                    id="gapLarge"
+                    type="number"
+                    min="100"
+                    max="1000"
+                    step="any"
+                    value="110"
+                    required
+                /></label>
+              </div>
+              <label
+                >Automatic response<select id="policyAction">
+                  <option value="none">Off</option>
+                  <option value="hold">Hold</option>
+                  <option value="dropoff">Drop-off-only</option>
+                  <option value="pattern">Announced skip pattern</option>
+                </select></label
+              >
+              <p class="hint">
+                Uses the hold duration, drop-off-only, or pattern settings above. Automatic
+                restrictions keep at least one unrestricted bus.
+              </p>
+              <div class="two">
+                <label
+                  >Begin checking <span>simulation minutes</span
+                  ><input
+                    id="policyStart"
+                    type="number"
+                    min="0"
+                    max="10080"
+                    step="any"
+                    value="25"
+                    required
+                /></label>
+                <label
+                  >End checking <span>simulation minutes</span
+                  ><input
+                    id="policyEnd"
+                    type="number"
+                    min="0"
+                    max="10080"
+                    step="any"
+                    value="60"
+                    required
+                /></label>
+              </div>
+              <label
+                >Check interval <span>seconds</span
+                ><input
+                  id="policyInterval"
+                  type="number"
+                  min="1"
+                  max="604800"
+                  step="any"
+                  value="15"
+                  required
+              /></label>
+              <button type="submit">Apply dispatch & reset</button>
+            </form>
+          </details>
           <div id="message" role="status" aria-live="polite"></div>
         </aside>
       </div>
@@ -348,7 +518,8 @@
             Compare interventions by resetting with the same setup and seed. Headway variation
             measures spatial gaps around the loop; it is not a direct passenger outcome.
             Completed-passenger averages exclude people still waiting or riding, whose counts remain
-            visible.
+            visible. Compare current queue waits, passed-over passengers and passenger time accrued
+            as well: a policy can appear faster if its worst-affected riders have not finished.
           </p>
           <details>
             <summary>Model & metric definitions</summary>
@@ -376,11 +547,30 @@
               across all buses. Events sharing the final timestamp finish together. Export or review
               the data, then reset to start another run.
             </p>
+            <p>
+              Oldest and mean current queue wait measure this queue episode (now minus queue entry),
+              including people waiting after transfers. Passed-over counts one waiting passenger per
+              restricted bus visit, including a bus passing without stopping; one person can be
+              counted repeatedly. The unique count counts each affected person once. Passenger time
+              accrued is the sum of completed trip times plus elapsed time since first arrival for
+              everyone unfinished, shown in passenger-minutes. Compare at the same clock time with
+              matching demand; it is not a mean or a prediction of final trip times.
+            </p>
+            <p>
+              Announced patterns never force transfers. Existing drop-offs are protected, even at a
+              planned skipped stop; those exception stops admit no new riders. New riders board only
+              if their first upcoming destination visit is served by the plan. Recovery ending means
+              ahead ≤ 110% and behind ≥ 90% of target at a stop arrival. Every new restriction has a
+              time cap measured from announcement. Restore normal service cancels restrictions but
+              keeps holds. An automatic policy evaluates both gaps from one snapshot, acts at most
+              once per bus visit, and keeps one unrestricted bus. Manual restrictions can cover
+              every bus, so watch queues and restore normal service if needed.
+            </p>
           </details>
         </section>
       </div>
     </main>
     <footer>BUS BUNCHING LAB <span>Explore the gaps. Measure the passenger cost.</span></footer>
-    <script type="module" src="app.js?v=20261004b"></script>
+    <script type="module" src="app.js?v=20261015a"></script>
   </body>
 </html>

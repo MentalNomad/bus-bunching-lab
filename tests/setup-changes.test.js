@@ -21,10 +21,14 @@ test('all built-in scenarios run at every stop/bus boundary combination with bot
     for (const stops of [3, 40])
       for (const buses of [1, 16])
         for (const arrival of ['fixed', 'poisson']) {
-          const e = new Experiment(
-            { stops, buses, ride: Math.min(4, stops - 1), arrival },
-            scenario.id,
-          );
+          const config = { stops, buses, ride: Math.min(4, stops - 1), arrival };
+          // A saved announcement is explicit: shrinking the route must reject
+          // its six-stop lead-in rather than silently change the lesson.
+          if (scenario.id === 'announced-express' && stops <= 6) {
+            assert.throws(() => new Experiment(config, scenario.id), /Lead-in/);
+            continue;
+          }
+          const e = new Experiment(config, scenario.id);
           e.advanceTo(3700);
           healthy(e);
         }

@@ -89,6 +89,30 @@ test('guide assets, downloads, and navigation work below a hosting subpath', asy
   assert.match(guide, /Open a new lab tab/);
 });
 
+test('every inline intervention and recovery fragment is valid in a complete version 2 recipe', async () => {
+  const base = JSON.parse(
+    await readFile(new URL('../dist/examples/announced-skip.json', import.meta.url), 'utf8'),
+  );
+  let checked = 0;
+  for (const [, attributes, text] of guide.matchAll(
+    /<pre\b[^>]*>\s*<code\b([^>]*)>([\s\S]*?)<\/code>\s*<\/pre>/g,
+  )) {
+    if (attributes.includes('data-example-file')) continue;
+    const data = structuredClone(base);
+    const fragment = text.trim();
+    if (fragment.startsWith('"recovery_policy"')) {
+      data.recovery_policy = JSON.parse(`{${fragment}}`).recovery_policy;
+      data.interventions = [];
+    } else {
+      data.interventions = [JSON.parse(fragment)];
+      data.recovery_policy = null;
+    }
+    assert.doesNotThrow(() => parseScenario(JSON.stringify(data)), fragment);
+    checked++;
+  }
+  assert.equal(checked, 8);
+});
+
 test('example copy uses exact text and provides a selected, labelled fallback when unavailable', async () => {
   const text = examples[0][2];
   const status = { textContent: '' };

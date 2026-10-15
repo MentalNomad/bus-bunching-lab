@@ -12,7 +12,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23203e35'/%3E%3Cpath d='M9 9h14v14H9z' fill='%23d5f184'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./scenario-guide.css?v=20261004a" />
+    <link rel="stylesheet" href="./scenario-guide.css?v=20261015a" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to the guide</a>
@@ -56,7 +56,7 @@
             <h2 id="quick-start-title">From example to experiment</h2>
             <p>
               A scenario is a recipe for a fresh run. Every run starts with empty queues and evenly
-              spaced buses in motion. You can begin with either complete example below.
+              spaced buses in motion. Begin with one of the complete examples below.
             </p>
             <ol class="steps">
               <li>
@@ -91,7 +91,7 @@
 
           <section class="guide-section" id="examples" aria-labelledby="examples-title">
             <span class="section-number">02 / Ready to import</span>
-            <h2 id="examples-title">Two complete lessons</h2>
+            <h2 id="examples-title">Complete lessons to copy or download</h2>
             <p>
               These examples are complete scenario files. Their downloadable JSON and the text shown
               here are the same. The smaller code samples later in this guide are fragments to edit
@@ -244,6 +244,40 @@
 </code></pre>
               </details>
             </article>
+            <article class="example" aria-labelledby="v2-examples-title">
+              <h3 id="v2-examples-title">New: two gaps and passenger-preserving service</h3>
+              <span class="tag">COMPLETE VERSION 2 SCENARIOS</span>
+              <p>
+                Each download matches a built-in lesson and stands on its own: 12 stops, four buses,
+                fixed arrivals and a 60-second Bus 1 hold at minute 20. Open the downloaded text
+                file, copy all its JSON, then import it as a preset. Keep the same setup and
+                disruption when comparing the three responses.
+              </p>
+              <ul>
+                <li>
+                  <a href="./examples/two-gap-holds.json" download>Download two-gap-holds.json ↓</a
+                  >: from minute 25 to minute 60, check every 15 seconds. Hold a bus for 30 seconds
+                  when its gap ahead is below 90% of ideal and its gap behind is above 110%.
+                </li>
+                <li>
+                  <a href="./examples/drop-off-only.json" download>Download drop-off-only.json ↓</a
+                  >: use the same checks, but look for a large gap ahead and small gap behind. Give
+                  qualifying buses three drop-off-only stop locations, capped at ten minutes.
+                </li>
+                <li>
+                  <a href="./examples/announced-skip.json" download
+                    >Download announced-skip.json ↓</a
+                  >: at minute 25, announce six lead-in stops for Bus 1, then serve every third stop
+                  for 12 locations, capped at 30 minutes from announcement. This lesson uses a timed
+                  instruction, with no automatic recovery policy.
+                </li>
+              </ul>
+              <p class="hint">
+                These new service modes honor accepted drop-offs. They can still leave waiting
+                passengers behind. Watch the pass-over counts, oldest queue wait and unfinished
+                trips as well as completed-passenger averages.
+              </p>
+            </article>
             <noscript
               ><p class="callout">
                 The full examples and downloads work without JavaScript. Select the JSON text
@@ -280,7 +314,12 @@
                     </tr>
                     <tr>
                       <td><code>version</code></td>
-                      <td>The number <code>1</code>.</td>
+                      <td>
+                        <code>1</code> for the original actions and rules; <code>2</code> for
+                        two-gap conditions, drop-off-only service or announced patterns. Old version
+                        1 files still import with their original behavior. Export chooses version 2
+                        only when the lesson uses a new feature.
+                      </td>
                     </tr>
                     <tr>
                       <td><code>name</code></td>
@@ -413,7 +452,7 @@
             <h2 id="timed-actions-title">Tell dispatch what to do, and when</h2>
             <p>
               Each entry in <code>interventions</code> needs <code>at_seconds</code>,
-              <code>bus</code>, <code>action</code>, and the one parameter for that action. Time is
+              <code>bus</code>, <code>action</code>, and the parameters for that action. Time is
               measured from the start of the run; bus numbers start at <strong>1</strong>.
             </p>
             <p>
@@ -486,6 +525,96 @@
                 and it replaces any alternating recovery mode on that bus.
               </p>
             </details>
+            <details>
+              <summary>Version 2: drop-off-only service</summary>
+              <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
+              <pre
+                class="code"
+                tabindex="0"
+                aria-label="Drop-off-only intervention fragment"
+              ><code>{
+  "at_seconds": 1500, "bus": 1, "action": "drop_off_only",
+  "stops": 3, "until_recovered": false, "max_seconds": 600
+}</code></pre>
+              <p>
+                Honor every onboard destination but admit no new passengers. The count includes the
+                current stop if stopped, or the next stop if moving. <code>stops</code> is an
+                integer from 1 to 400; it counts stop locations passed, including locations with no
+                drop-offs. A passenger already boarding finishes boarding and keeps that trip.
+              </p>
+              <p>
+                The following bus may gain passengers and slow down while this bus saves boarding
+                time. This is useful for a bus with a large gap ahead and a close follower; it does
+                not guarantee lower passenger time.
+              </p>
+            </details>
+            <details>
+              <summary>Version 2: announce a skip pattern in advance</summary>
+              <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
+              <pre
+                class="code"
+                tabindex="0"
+                aria-label="Announced skip intervention fragment"
+              ><code>{
+  "at_seconds": 1500, "bus": 1, "action": "announced_skip",
+  "lead_stops": 6, "serve_every": 3, "for_stops": 12,
+  "until_recovered": false, "max_seconds": 1800
+}</code></pre>
+              <p>
+                The anchor is the current service stop, or the next stop if moving. Serve that
+                anchor, then serve <code>lead_stops</code> upcoming locations normally. After the
+                lead-in, skip <code>serve_every − 1</code> locations, serve one, and repeat.
+                <code>serve_every: 2</code> alternates; <code>3</code> serves every third location.
+                <code>for_stops</code> counts active locations after the lead-in, including skipped
+                locations; it is an integer from 1 to 400.
+              </p>
+              <p>
+                With anchor stop 1 on a 12-stop loop and six lead-in stops, stops 2–7 have normal
+                service. Then skip 8 and 9, serve 10, skip 11 and 12, serve 1, and repeat. The
+                pattern follows successive encounters, including across the route wrap; with a route
+                size not divisible by the pattern, a station's service can change each lap.
+                <code>lead_stops</code> is an integer from 0 to <code>setup.stops − 1</code>;
+                <code>serve_every</code> is an integer from 2 through <code>setup.stops</code>.
+              </p>
+              <p>
+                Boarding eligibility changes at announcement, including during the lead-in. A
+                waiting passenger boards only if the first upcoming visit to their destination will
+                be served under the plan. A later visit on another lap does not qualify. Accepted
+                riders keep their promised drop-offs: a nominal skipped stop becomes a drop-off-only
+                exception when a rider needs it. That exception does not allow boarding. Shortening
+                or canceling a plan restores service; a new plan continues protecting every rider
+                already accepted.
+              </p>
+              <p class="hint">
+                The bus still travels every route segment. Skipping saves service time, not
+                distance. New service modes do not force transfers; legacy <code>express</code>
+                retains its documented transfer behavior.
+              </p>
+            </details>
+            <details>
+              <summary>Version 2: duration, recovery and returning to normal</summary>
+              <p>
+                For either new service action, <code>until_recovered: true</code> ignores the stop
+                count and ends at an arrival when the gap ahead is at most 110% of ideal and the gap
+                behind is at least 90% of ideal. With <code>false</code>, use the fixed stop count,
+                or <code>null</code> for ongoing service. Ongoing service lasts until canceled or
+                its time cap expires. Every instruction requires <code>max_seconds</code>, a number
+                from 1 through 604,800. This cap starts at announcement and includes lead-in,
+                service and holds; it applies even if recovery never occurs. Reaching the cap
+                restores normal service.
+              </p>
+              <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
+              <pre
+                class="code"
+                tabindex="0"
+                aria-label="Normal service intervention fragment"
+              ><code>{ "at_seconds": 3000, "bus": 1, "action": "normal_service" }</code></pre>
+              <p>
+                This cancels restrictive service, including legacy express. It does not cancel an
+                active or queued hold. There is no numeric parameter. Use it as an explicit ending
+                for ongoing service or to stop a plan early.
+              </p>
+            </details>
             <p class="hint">
               Use at most 1,000 timed interventions, including manual dispatches recorded during the
               run. Combined queued holds or multiplied segment travel cannot exceed seven days. If a
@@ -498,23 +627,75 @@
             <span class="section-number">05 / Automatic recovery</span>
             <h2 id="recovery-title">Choose one versioned rule</h2>
             <p>
-              Set <code>recovery_policy</code> to <code>null</code>, or choose one of the three
-              exact rule names below. The rule name fixes its thresholds and formulas. Editing
-              <code>description</code>, <code>notes</code>, or optional
-              <code>rule_explanation</code> text changes documentation only.
+              Set <code>recovery_policy</code> to <code>null</code>, choose an original version 1
+              rule, or configure <code>two-gap-v2</code> in a version 2 file. Original rule names
+              keep their thresholds and formulas. Editing <code>description</code>,
+              <code>notes</code>, or optional <code>rule_explanation</code> text changes
+              documentation only.
             </p>
             <div class="callout">
               <p>
                 <strong>Ideal gap = stops ÷ buses.</strong> Forward gap is the distance to the
-                nearest bus ahead, measured in stop units. With 12 stops and 4 buses, the ideal gap
-                is 3 stops.
+                nearest bus ahead, measured in stop units. Gap behind is distance to the nearest
+                follower. With 12 stops and 4 buses, the ideal gap is 3 stops.
               </p>
               <p>
                 At each scheduled check, a bus is eligible only if it is at a service stop and has
-                no active or queued hold, fixed-count express, or alternating express recovery.
-                Buses travelling between stops are skipped for that check.
+                no active or queued hold or restrictive service. Buses travelling between stops are
+                skipped for that check.
               </p>
             </div>
+            <details>
+              <summary>Version 2: test both gaps, then choose a response</summary>
+              <p><span class="tag">FRAGMENT · REPLACE RECOVERY_POLICY</span></p>
+              <pre
+                class="code"
+                tabindex="0"
+                aria-label="Two-gap recovery policy fragment"
+              ><code>"recovery_policy": {
+  "rule": "two-gap-v2",
+  "condition": {
+    "ahead": "large", "behind": "small",
+    "small_ratio": 0.9, "large_ratio": 1.1
+  },
+  "response": {
+    "action": "drop_off_only", "stops": 3,
+    "until_recovered": false, "max_seconds": 600
+  },
+  "start_seconds": 1500, "end_seconds": 3600,
+  "check_every_seconds": 15
+}</code></pre>
+              <p>
+                Each direction is <code>"small"</code>, <code>"large"</code> or <code>"any"</code>;
+                all selected conditions must match, and at least one direction must be tested. Small
+                means strictly less than <code>small_ratio × ideal</code>; large means strictly
+                greater than <code>large_ratio × ideal</code>. Equality does not trigger. On a
+                12-stop/four-bus route, ratios 0.9 and 1.1 mean below 2.7 stops and above 3.3 stops
+                respectively. These are spatial distances, not elapsed time.
+              </p>
+              <p>
+                <code>small_ratio</code> must be greater than 0 and at most 1;
+                <code>large_ratio</code> must be from 1 to 10, and larger than
+                <code>small_ratio</code>. Choose a <code>hold</code> response with
+                <code>seconds</code>, or <code>drop_off_only</code> /
+                <code>announced_skip</code> with all their fields shown above. A response has no
+                <code>bus</code> or <code>at_seconds</code>: it targets each qualifying bus at that
+                check.
+              </p>
+              <p>
+                Candidates are evaluated from one common snapshot. The policy acts only at service
+                stops, at most once per visit, and never overrides another hold or restrictive mode.
+                Automatic restrictive service reserves at least one unrestricted local bus. With one
+                bus, no two-gap intervention is activated. Manual instructions can still remove all
+                boarding service, so watch queue waits. Ending the check schedule prevents new
+                activations; instructions already issued continue to their own ending or cap.
+              </p>
+              <p class="hint">
+                For holds, small ahead plus large behind is a useful starting condition. For
+                reducing boarding or skipping, try large ahead plus small behind. These are
+                experiments, not guarantees of better passenger outcomes.
+              </p>
+            </details>
             <div class="rules">
               <details class="rule">
                 <summary><code>hold-v1</code> · rebuild space ahead</summary>
@@ -638,6 +819,44 @@
                 of strategies, then try several seeds.
               </li>
             </ul>
+            <details>
+              <summary>Passenger metrics and the cost of leaving people behind</summary>
+              <p>
+                <strong>Completed-trip system time</strong> is completion time minus original
+                arrival time: it includes the initial queue, every later queue after a legacy
+                transfer, and all time aboard (travel, service and holds). The chart's individual
+                observations and the mean include only finished trips. A faster average can hide
+                riders who are still waiting or riding.
+              </p>
+              <p>
+                <strong>Oldest current queue wait</strong> is the longest current queue spell among
+                passengers still waiting. <strong>Mean current queue wait</strong> averages those
+                current queue spells across everyone waiting now. Both measure time since entry to
+                the current queue, including waits after transfers. Boarding passengers count as
+                onboard from boarding start.
+              </p>
+              <p>
+                <strong>Passed-over passengers</strong> counts one denial per passenger per
+                restricted bus visit, including a bus passing without stopping. The same person
+                denied by two buses contributes two pass-overs. The card's unique-people subtitle
+                counts that person only once. A queue can grow after the bus leaves; those later
+                arrivals are not attributed to that visit.
+              </p>
+              <p>
+                <strong>Passenger time accrued</strong> adds completed trip times to elapsed time
+                since original arrival for every unfinished passenger. It includes waiting and
+                riding, so people left behind remain visible. This is accumulated passenger time,
+                not an average or a prediction of final trip time. Compare it at the same simulation
+                clock with the same demand and seed. The card displays passenger-minutes
+                (<code>p-min</code>); the observations CSV records passenger-seconds.
+              </p>
+              <p>
+                Compare completed trips, waiting and onboard populations, pass-overs and oldest
+                queue wait together. The full passenger population is arrivals = completed + waiting
+                + onboard. Lower headway variation alone does not establish a better result for
+                passengers.
+              </p>
+            </details>
             <p class="hint">
               Completed-passenger averages exclude people who have not finished their trips. Headway
               variation measures spatial gaps around the loop; it is not itself a passenger
@@ -658,7 +877,7 @@
                 exist. A fragment from this guide is not a complete import.
               </p>
               <p>
-                <strong>File and run limits:</strong> scenario text is limited to 200,000
+                <strong>File and run limits:</strong> scenario text is limited to 500,000
                 characters, with at most 1,000 interventions and a seven-day schedule. A run can
                 also stop sooner at 250,000 passenger arrivals or 250,000 served stops across all
                 buses. Export or review the results, then reset for another run.
@@ -674,8 +893,8 @@
       </div>
     </main>
     <footer class="site-footer">
-      Bus Bunching Lab · Scenario format version 1 · Explore the gaps. Measure the passenger cost.
+      Bus Bunching Lab · Scenario formats 1 &amp; 2 · Explore the gaps. Measure the passenger cost.
     </footer>
-    <script type="module" src="./scenario-guide.js?v=20261004a"></script>
+    <script type="module" src="./scenario-guide.js?v=20261015a"></script>
   </body>
 </html>

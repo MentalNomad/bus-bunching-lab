@@ -5,6 +5,9 @@ export const builtInScenarioIds = [
   'holds',
   'express',
   'express-count',
+  'two-gap-holds',
+  'dropoff',
+  'announced-express',
 ];
 export function scenarioFromSearch(search) {
   const id = new URLSearchParams(search).get('scenario');

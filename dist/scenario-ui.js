@@ -1,10 +1,10 @@
-import { scenarios } from './experiment.js?v=20261004a';
+import { scenarios } from './experiment.js?v=20261015a';
 import {
   parseScenario,
   serializeScenario,
   ruleDescriptions,
-} from './scenario-format.js?v=20261004a';
-import { builtInScenarioIds, scenarioUrl } from './scenario-links.js?v=20261004a';
+} from './scenario-format.js?v=20261015a';
+import { builtInScenarioIds, scenarioUrl } from './scenario-links.js?v=20261015a';
 const storageKey = 'bus-lab-custom-scenarios-v1';
 function readCustomPresets() {
   const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -104,6 +104,12 @@ export function setupScenarioLibrary(getExperiment) {
   dialog.innerHTML =
     '<div class="dialog-heading"><h2 id="scenarioDialogTitle"></h2><button type="button" id="closeScenarioDialog" aria-label="Close scenario text">×</button></div><p id="scenarioTextHelp"></p><p class="guide-intro"><a href="./scenario-guide.html" target="_blank" rel="noopener">Read the scenario writing guide ↗</a> — complete examples, action reference and recovery rules. Opens in a new tab so this run stays open.</p><label for="scenarioText">Scenario text</label><textarea id="scenarioText" spellcheck="false"></textarea><details class="format-guide"><summary>Text format & recovery-rule reference</summary><p>This is JSON: keep field names and quotes, use numbers without quotes, and avoid trailing commas. Edit name and description for your lesson. Times are seconds from time zero; bus numbers start at 1. Actions: hold uses seconds, slow uses multiplier (1–10), express uses stops. Events at the same time run in listed order, after any recovery check at that time. The setup and seed reproduce arrivals. Imports support up to 1,000 interventions and a seven-day schedule.</p><p>Ideal gap = stops ÷ buses. Forward gap is the distance to the nearest bus ahead, in stop units. recovery_policy can be null, or specify a versioned rule and start_seconds, end_seconds (inclusive), and check_every_seconds. The rule defines the following exact behavior:</p><div id="ruleReference"></div><p>Scenarios start empty with evenly spaced buses. Export includes all preset events and manual interventions recorded in the current run, including later events retained while reviewing history. It excludes current passengers, observations, chart settings, playback speed, and page layout. Imported presets are saved in this browser; keep exported text to share or back up.</p></details><p id="scenarioTextMessage" role="status" aria-live="polite"></p><div class="dialog-actions"><button type="button" id="copyScenarioText">Copy text</button><button type="button" id="saveScenarioText" class="primary">Save as preset</button></div>';
   document.body.append(dialog);
+  const v2Reference = document.createElement('p');
+  v2Reference.textContent =
+    'Version 1 files remain supported. Version 2 adds drop_off_only (stops, until_recovered, max_seconds), announced_skip (lead_stops, serve_every, for_stops, until_recovered, max_seconds), and normal_service (no parameters). A null stop span means ongoing service until canceled or capped. New service modes preserve accepted drop-offs. The two-gap-v2 rule adds condition and response objects; use the guide’s complete examples for their exact fields. Apply dispatch & reset in the dispatch desk can create and export a policy without editing JSON.';
+  dialog
+    .querySelector('.format-guide')
+    .insertBefore(v2Reference, dialog.querySelector('#ruleReference'));
   const textarea = dialog.querySelector('textarea'),
     message = dialog.querySelector('#scenarioTextMessage'),
     save = dialog.querySelector('#saveScenarioText'),

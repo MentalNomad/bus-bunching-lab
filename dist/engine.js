@@ -1,4 +1,5 @@
 /* Discrete-event model. Times are seconds; unlimited capacity; FIFO queues. */
+import { normalizeServiceAction } from './service-plan.js?v=20261015a';
 export const MAX_SIMULATION_SECONDS = 604800;
 export const MAX_COMBINED_DELAY = MAX_SIMULATION_SECONDS;
 export const MAX_PASSENGERS = 250000;
@@ -45,6 +46,8 @@ export class Simulation {
     this.created = 0;
     this.completed = 0;
     this.transfers = 0;
+    this.passedOver = 0;
+    this.affectedPassengers = 0;
     this.waitSum = 0;
     this.systemSum = 0;
     this.series = observations();
@@ -79,6 +82,7 @@ export class Simulation {
         service: null,
         alight: [],
         visits: 0,
+        servicePlan: null,
       };
     });
   }
@@ -98,6 +102,35 @@ export class Simulation {
   action(id, type, value) {
     const b = this.buses[id];
     if (!b) throw Error('Choose a bus');
+    if (['dropoff', 'pattern', 'normal'].includes(type)) {
+      const instruction = normalizeServiceAction(type, value, this.c);
+      this.clearServicePlan(b);
+      b.express = 0;
+      b.pendingExpress = 0;
+      b.recoveryExpress = false;
+      // A passenger already using the door completes that movement. Everyone
+      // else aboard keeps their destination instead of being forced to transfer.
+      b.alight = b.load.filter(
+        (p) => p.dest === b.target && !(b.service?.kind === 'off' && b.service.p === p),
+      );
+      if (type !== 'normal') {
+        b.servicePlan = {
+          ...instruction,
+          type,
+          announcedAt: this.time,
+          expiresAt: this.time + instruction.maxSeconds,
+          anchor: b.target,
+          anchored: b.phase !== 'travel',
+          location: 0,
+        };
+        this.updateServicePlan(b);
+        this.note(
+          `Bus ${id + 1}: ${this.serviceStatus(b)}; maximum ${instruction.maxSeconds}s from announcement.`,
+        );
+      } else this.note(`Bus ${id + 1}: normal service resumes.`);
+      this.wakeService(b);
+      return;
+    }
     if (!Number.isFinite(value) || value <= 0) throw Error('Enter a positive value');
     if (type === 'hold') {
       if (value > 3600) throw Error('Maximum hold is 3,600 seconds');
@@ -130,6 +163,7 @@ export class Simulation {
     } else if (type === 'express') {
       if (!Number.isInteger(value) || value >= this.c.stops)
         throw Error('Skip 1 to number of stops minus 1');
+      this.clearServicePlan(b);
       b.recoveryExpress = false;
       b.pendingExpress = value;
       this.note(
@@ -141,6 +175,7 @@ export class Simulation {
         b.due = this.time;
       }
     } else if (type === 'recovery') {
+      this.clearServicePlan(b);
       b.recoveryExpress = true;
       b.pendingExpress = 1;
       this.note(
@@ -181,7 +216,113 @@ export class Simulation {
         gap = Math.min(gap, (this.position(other) - p + this.c.stops) % this.c.stops);
     return gap;
   }
+  backwardGap(b) {
+    let gap = this.c.stops;
+    const p = this.position(b);
+    for (const other of this.buses)
+      if (other !== b)
+        gap = Math.min(gap, (p - this.position(other) + this.c.stops) % this.c.stops);
+    return gap;
+  }
+  gaps(b) {
+    return { ahead: this.forwardGap(b), behind: this.backwardGap(b) };
+  }
+  wakeService(b) {
+    if (b.phase === 'hold') {
+      b.phase = 'service';
+      b.due = this.time;
+    }
+  }
+  clearServicePlan(b, reason = '') {
+    if (!b.servicePlan) return;
+    b.servicePlan = null;
+    this.wakeService(b);
+    if (reason) this.note(`Bus ${b.id + 1}: ${reason}; normal service resumes.`);
+  }
+  patternSkips(plan, location) {
+    const active = location - plan.leadStops;
+    return (
+      active > 0 &&
+      (plan.untilRecovered || plan.stops === null || active <= plan.stops) &&
+      active % plan.every !== 0
+    );
+  }
+  updateServicePlan(b, atStop = false) {
+    const plan = b.servicePlan;
+    if (!plan) return;
+    const active = plan.type === 'pattern' ? plan.location - plan.leadStops : plan.location + 1;
+    plan.leadRemaining = plan.type === 'pattern' ? Math.max(0, plan.leadStops - plan.location) : 0;
+    const servedCurrent = plan.anchored && b.phase === 'travel' && !atStop ? 0 : 1;
+    plan.remaining =
+      plan.untilRecovered || plan.stops === null
+        ? null
+        : Math.max(0, plan.stops - Math.max(0, active - servedCurrent));
+    plan.phase = !plan.anchored ? 'pending' : active <= 0 ? 'lead-in' : 'active';
+    plan.skip = plan.anchored && plan.type === 'pattern' && this.patternSkips(plan, plan.location);
+  }
+  serviceStatus(b) {
+    const plan = b.servicePlan;
+    if (!plan) return '';
+    if (plan.type === 'dropoff')
+      return `drop-off only ${plan.untilRecovered ? 'until spacing recovers' : plan.stops === null ? 'until canceled or its time limit' : `for ${plan.remaining} stop locations`}`;
+    const lead = plan.leadRemaining ? ` after ${plan.leadRemaining} lead-in stops` : '';
+    return `announced pattern: serve every ${plan.every} stops${lead}${plan.untilRecovered ? ', until spacing recovers' : plan.stops === null ? ', until canceled or its time limit' : `, ${plan.remaining} pattern locations remaining`}`;
+  }
+  canBoard(b, p) {
+    const plan = b.servicePlan;
+    if (plan) {
+      if (plan.type === 'dropoff') return false;
+      if (plan.skip) return false;
+      const distance = (p.dest - b.target + this.c.stops) % this.c.stops || this.c.stops;
+      return !this.patternSkips(plan, plan.location + distance);
+    }
+    return !Array.from({ length: b.express }, (_, i) => (b.target + i + 1) % this.c.stops).includes(
+      p.dest,
+    );
+  }
+  stopPlan(b, stopId) {
+    if (!Number.isInteger(stopId) || stopId < 0 || stopId >= this.c.stops)
+      throw Error('Choose a route stop');
+    const distance = (stopId - b.target + this.c.stops) % this.c.stops;
+    const plan = b.servicePlan;
+    if (plan?.type === 'pattern') {
+      const location = plan.location + distance + (b.phase === 'travel' && plan.anchored ? 1 : 0);
+      if (!this.patternSkips(plan, location)) return 'normal';
+      return b.load.some((p) => p.dest === stopId) ||
+        (b.service?.kind === 'on' && b.service.p.dest === stopId)
+        ? 'protected'
+        : 'skip';
+    }
+    if (plan) return 'normal';
+    const skips = b.express || b.pendingExpress;
+    const startsHere = b.phase === 'travel' && b.express > 0;
+    return distance >= (startsHere ? 0 : 1) && distance < skips + (startsHere ? 0 : 1)
+      ? 'skip'
+      : 'normal';
+  }
+  countPassedOver(b) {
+    for (const p of this.stops[b.target].queue) {
+      if (b.express <= 0 && this.canBoard(b, p)) continue;
+      this.passedOver++;
+      if (!p.passedOver) {
+        p.passedOver = true;
+        this.affectedPassengers++;
+      }
+    }
+  }
   arrive(b) {
+    if (b.servicePlan) {
+      const plan = b.servicePlan;
+      if (plan.anchored) plan.location++;
+      else plan.anchored = true;
+      const ideal = this.c.stops / this.c.buses;
+      const recovered =
+        plan.untilRecovered &&
+        this.forwardGap(b) <= ideal * 1.1 &&
+        this.backwardGap(b) >= ideal * 0.9;
+      if (recovered) this.clearServicePlan(b, 'spacing recovered');
+      else this.updateServicePlan(b, true);
+    }
     if (b.recoveryExpress && this.forwardGap(b) <= this.c.stops / this.c.buses) {
       b.recoveryExpress = false;
       b.express = 0;
@@ -189,7 +330,14 @@ export class Simulation {
       this.note(`Bus ${b.id + 1}: forward gap recovered; normal service resumes.`);
     }
     if (b.express > 0) {
+      this.countPassedOver(b);
       b.express--;
+      this.depart(b);
+      return;
+    }
+    if (b.servicePlan?.skip && !b.load.some((p) => p.dest === b.target) && !b.pendingHold) {
+      this.countPassedOver(b);
+      this.finishPlanLocation(b);
       this.depart(b);
       return;
     }
@@ -206,6 +354,7 @@ export class Simulation {
   }
   depart(b) {
     if (b.phase !== 'travel') {
+      this.countPassedOver(b);
       for (let i = b.waitStart ?? 0; i < b.wait.length; i++) b.wait[i].commitT = this.time;
       if (b.wait.length > (b.waitStart ?? 0)) b.wait.commitRevision++;
       let committed = false;
@@ -222,6 +371,7 @@ export class Simulation {
         commitT: this.time,
       });
       b.visits++;
+      this.finishPlanLocation(b);
     }
     b.from = b.target;
     b.origin = b.target;
@@ -230,6 +380,13 @@ export class Simulation {
     b.due = this.time + this.c.travel * b.pendingSlow;
     b.pendingSlow = 1;
     b.phase = 'travel';
+    this.updateServicePlan(b);
+  }
+  finishPlanLocation(b) {
+    const plan = b.servicePlan;
+    if (!plan || plan.untilRecovered || plan.stops === null) return;
+    const active = plan.type === 'pattern' ? plan.location - plan.leadStops : plan.location + 1;
+    if (active >= plan.stops) this.clearServicePlan(b, 'service span completed');
   }
   finishService(b) {
     const task = b.service;
@@ -265,12 +422,7 @@ export class Simulation {
       b.due = this.time + this.c.debark;
       return;
     }
-    const index = stop.queue.findIndex(
-      (p) =>
-        !Array.from({ length: b.express }, (_, i) => (b.target + i + 1) % this.c.stops).includes(
-          p.dest,
-        ),
-    );
+    const index = stop.queue.findIndex((p) => this.canBoard(b, p));
     if (index >= 0) {
       b.service = { kind: 'on', p: stop.queue.splice(index, 1)[0], start: this.time };
       b.due = this.time + this.c.board;
@@ -292,7 +444,8 @@ export class Simulation {
     while (true) {
       let next = end + 1;
       let stop = null,
-        bus = null;
+        bus = null,
+        expiry = null;
       for (const s of this.stops)
         if (s.next < next) {
           next = s.next;
@@ -303,6 +456,13 @@ export class Simulation {
         if (b.due < next) {
           next = b.due;
           bus = b;
+          stop = null;
+        }
+      for (const b of this.buses)
+        if (b.servicePlan && b.servicePlan.expiresAt <= next) {
+          next = b.servicePlan.expiresAt;
+          expiry = b;
+          bus = null;
           stop = null;
         }
       if (next > end) break;
@@ -321,7 +481,8 @@ export class Simulation {
       }
       if (++count > 2000000) throw Error('Too many events; reduce demand');
       this.time = next;
-      if (stop) {
+      if (expiry) this.clearServicePlan(expiry, 'service time limit reached');
+      else if (stop) {
         let ride = this.c.ride;
         if (this.c.rideMode === 'random')
           ride = 1 + Math.floor(this.random() * Math.min(this.c.stops - 1, 2 * this.c.ride - 1));
@@ -358,6 +519,20 @@ export class Simulation {
     );
     if (gaps.length === 1) gaps[0] = this.c.stops;
     const mean = this.c.stops / this.c.buses;
+    let currentWaitSum = 0,
+      oldestWait = 0,
+      unfinishedTime = 0;
+    for (const stop of this.stops)
+      for (const p of stop.queue) {
+        const wait = this.time - p.queued;
+        currentWaitSum += wait;
+        oldestWait = Math.max(oldestWait, wait);
+        unfinishedTime += this.time - p.born;
+      }
+    for (const b of this.buses) {
+      for (const p of b.load) unfinishedTime += this.time - p.born;
+      if (b.service?.kind === 'on') unfinishedTime += this.time - b.service.p.born;
+    }
     return {
       time: this.time,
       created: this.created,
@@ -365,6 +540,11 @@ export class Simulation {
       waiting,
       onboard,
       transfers: this.transfers,
+      passedOver: this.passedOver,
+      affectedPassengers: this.affectedPassengers,
+      oldestWait,
+      meanCurrentWait: waiting ? currentWaitSum / waiting : 0,
+      totalPassengerTime: this.systemSum + unfinishedTime,
       meanWait: this.completed ? this.waitSum / this.completed : 0,
       meanSystem: this.completed ? this.systemSum / this.completed : 0,
       gapCV: Math.sqrt(gaps.reduce((s, g) => s + (g - mean) ** 2, 0) / gaps.length) / mean,

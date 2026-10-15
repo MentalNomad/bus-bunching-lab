@@ -277,6 +277,28 @@ button.subtle {
   margin-top: 4px;
   flex-shrink: 0;
 }
+.bus-gaps {
+  display: block;
+  margin-top: 5px;
+  color: #596d51;
+  line-height: 1.5;
+}
+.plan-legend {
+  text-align: center;
+  font-size: 12px;
+  margin: -8px 0 16px;
+}
+.intervention > summary {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.intervention[open] > p {
+  margin-top: 10px;
+}
+.restore-service {
+  margin-top: 18px;
+  width: 100%;
+}
 .intervention {
   border-top: 1px solid var(--line);
   padding-top: 17px;
@@ -297,7 +319,7 @@ button.subtle {
 }
 .metrics {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 14px;
   margin: 22px 0;
 }
@@ -467,6 +489,10 @@ footer {
   .dispatch > label,
   .dispatch > #message {
     grid-column: 1/-1;
+  }
+  .dispatch > #policyControls,
+  .dispatch > .restore-service {
+    grid-column: 1 / -1;
   }
   .dispatch > .section-title,
   .dispatch > p {

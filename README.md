@@ -9,13 +9,16 @@ Project author and direction: [MentalNomad](https://github.com/MentalNomad). Cod
 ## Explore and teach
 
 - Watch buses, queues, and spacing on a circular route; adjust demand, travel, boarding, and ride lengths.
-- Compare six built-in scenarios, from a balanced baseline to random demand and recovery through holds or temporary express service.
-- Hold buses, slow a segment, or skip stops; rewind deterministically and branch an experiment with a new intervention.
+- Compare nine built-in scenarios, from a balanced baseline to random demand, selective holds, drop-off-only recovery, and announced skip patterns.
+- Hold buses, slow a segment, skip stops, or restrict boarding while preserving accepted drop-offs; rewind deterministically and branch an experiment with a new intervention.
+- Configure automatic responses to the gaps both ahead of and behind each bus. Announced patterns can start after a lead-in, serve every Kth stop, and finish after a span, recovery, cancellation, or a time cap.
 - Open a paused copy of the current state, export observations as CSV, and import or export reusable scenario JSON.
 
 The [educator scenario guide](dist/scenario-guide.html) explains the format, units, recovery rules, and validation limits, with examples to copy or download. Scenario exports restart at time zero; current-state copies preserve passengers and history. Custom scenarios are stored in the current browser, so export them for backup and sharing.
 
-Charts show dwell, queue wait, and total system time. System time includes initial queue wait, boarding, riding, holds, transfers, and final debarking. Summary means include completed passengers only; unfinished counts stay visible. Whole-stop chart averages publish at departure and include complete passenger groups until at least the chosen window size is covered. Each-passenger mode uses exactly the last N observations.
+Charts show dwell, queue wait, and total system time. System time includes initial queue wait, boarding, riding, holds, transfers, and final debarking. Summary means include completed passengers only; current queue waits, repeated and unique passenger pass-overs, and passenger time accrued across completed and unfinished trips expose costs to people left waiting. Accrued time is displayed in passenger-minutes; CSV uses seconds and a separate count column. Whole-stop chart averages publish at departure and include complete passenger groups until at least the chosen window size is covered. Each-passenger mode uses exactly the last N observations.
+
+Version 1 scenario files remain compatible. Version 2 adds two-gap conditions, drop-off-only service, announced patterns and explicit normal-service cancellation. New service modes preserve onboard destinations; legacy temporary express retains its transfer behavior. Automatic restrictions reserve an unrestricted bus, while manual interventions allow experiments with reduced coverage. Skipping saves passenger service time: buses still traverse every segment and there is no fixed stop overhead.
 
 ## Run locally
 

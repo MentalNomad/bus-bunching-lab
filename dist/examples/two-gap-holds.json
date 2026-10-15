@@ -1,0 +1,32 @@
+{
+  "format": "Bus Bunching Lab scenario",
+  "version": 2,
+  "name": "Two-gap recovery with modest holds",
+  "description": "Start 12 stops and four evenly spaced buses with fixed passenger arrivals. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through minute 60, check every 15 seconds. At a service stop, hold an eligible bus for 30 seconds only when its gap ahead is below 90% of ideal and its gap behind exceeds 110% of ideal. Compare passenger time and queues with the identical delay and no policy.",
+  "setup": {
+    "stops": 12,
+    "buses": 4,
+    "travel_seconds_per_segment": 40,
+    "passengers_per_stop_per_minute": 3,
+    "arrival_pattern": "fixed",
+    "boarding_seconds_per_passenger": 2,
+    "debarking_seconds_per_passenger": 1,
+    "ride_length_stops": 4,
+    "ride_pattern": "fixed",
+    "random_seed": 42
+  },
+  "interventions": [{ "at_seconds": 1200, "bus": 1, "action": "hold", "seconds": 60 }],
+  "recovery_policy": {
+    "rule": "two-gap-v2",
+    "condition": {
+      "ahead": "small",
+      "behind": "large",
+      "small_ratio": 0.9,
+      "large_ratio": 1.1
+    },
+    "response": { "action": "hold", "seconds": 30 },
+    "start_seconds": 1500,
+    "end_seconds": 3600,
+    "check_every_seconds": 15
+  }
+}
