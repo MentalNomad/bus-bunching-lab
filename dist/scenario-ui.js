@@ -1,11 +1,11 @@
-import { scenarios } from './experiment.js?v=20261015c';
+import { scenarios } from './experiment.js?v=20261015g';
 import {
   parseScenario,
   serializeScenario,
   ruleDescriptions,
   correctedRuleDescriptions,
-} from './scenario-format.js?v=20261015c';
-import { builtInScenarioIds, scenarioUrl } from './scenario-links.js?v=20261015c';
+} from './scenario-format.js?v=20261015g';
+import { builtInScenarioIds, scenarioUrl } from './scenario-links.js?v=20261015g';
 const storageKey = 'bus-lab-custom-scenarios-v1';
 function readCustomPresets() {
   const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -42,6 +42,7 @@ export function setupScenarioLibrary(getExperiment) {
     const value = getExperiment().scenarioId;
     select.replaceChildren();
     for (const s of scenarios) {
+      if (s.aliasFor && s.id !== value) continue;
       const option = document.createElement('option');
       option.value = s.id;
       option.textContent = (s.custom ? 'Custom · ' : '') + s.name;

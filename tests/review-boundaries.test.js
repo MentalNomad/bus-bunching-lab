@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Experiment } from '../dist/experiment.js';
+import { historicalScenarios } from '../dist/historical-scenarios.js';
 import { parseScenario, serializeScenario } from '../dist/scenario-format.js';
 
 test('the last allowed intervention remains shareable and one more leaves the run unchanged', () => {
@@ -51,8 +52,12 @@ test('restored timeline bounds cannot exceed the supported run duration', () => 
     assert.throws(() => Experiment.restore({ ...copy, furthest }), /copy|timeline/i);
 });
 
-test('manual dispatch operates on the current model without replaying its history', () => {
-  const e = new Experiment({}, 'variance');
+test('historical manual dispatch operates without replaying its history', () => {
+  const e = new Experiment(
+    {},
+    'variance',
+    historicalScenarios.find((s) => s.id === 'variance'),
+  );
   e.advanceTo(3600);
   const sim = e.sim,
     prototype = Object.getPrototypeOf(sim),

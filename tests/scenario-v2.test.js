@@ -7,12 +7,15 @@ import {
   MAX_SCENARIO_TEXT_LENGTH,
 } from '../dist/scenario-format.js';
 import { normalizeGapPolicy } from '../dist/dispatch-rules.js';
-import { Experiment, scenarios } from '../dist/experiment.js';
+import { Experiment } from '../dist/experiment.js';
+import { historicalScenarios as scenarios } from '../dist/historical-scenarios.js';
 
 const files = ['two-gap-holds', 'drop-off-only', 'announced-skip'];
 const examples = await Promise.all(
   files.map(async (name) =>
-    JSON.parse(await readFile(new URL(`../dist/examples/${name}.json`, import.meta.url), 'utf8')),
+    JSON.parse(
+      await readFile(new URL(`../dist/examples/historical/${name}.json`, import.meta.url), 'utf8'),
+    ),
   ),
 );
 const copy = (value) => structuredClone(value);
@@ -58,13 +61,13 @@ test('all three v2 guide downloads roundtrip and replay deterministically, inclu
   }
 });
 
-test('v2 downloads use the same recipe as the three built-in demonstrations', () => {
+test('v2 downloads use the same recipe as the three archived historical demonstrations', () => {
   const ids = ['two-gap-holds', 'dropoff', 'announced-express'];
   examples.forEach((example, index) => {
     const imported = parse(example);
     const preset = scenarios.find((scenario) => scenario.id === ids[index]);
     assert(preset, `${ids[index]} must be loadable from the library`);
-    const builtIn = new Experiment({}, preset.id);
+    const builtIn = new Experiment({}, preset.id, preset);
     assert.deepEqual(imported.config, builtIn.config);
     assert.deepEqual(imported.events, preset.events);
     assert.deepEqual(imported.policy, preset.policy);
@@ -75,7 +78,9 @@ test('v2 downloads use the same recipe as the three built-in demonstrations', ()
 
 test('legacy recipes remain version 1, v2 can contain legacy actions, and only new features require v2', () => {
   const original = scenarios.find((scenario) => scenario.id === 'delay');
-  const legacy = JSON.parse(serializeScenario(original, new Experiment({}, original.id).config));
+  const legacy = JSON.parse(
+    serializeScenario(original, new Experiment({}, original.id, original).config),
+  );
   assert.equal(legacy.version, 1);
   const expected = parse(legacy);
   legacy.version = 2;

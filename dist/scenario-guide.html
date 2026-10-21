@@ -12,7 +12,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23203e35'/%3E%3Cpath d='M9 9h14v14H9z' fill='%23d5f184'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./scenario-guide.css?v=20261015c" />
+    <link rel="stylesheet" href="./scenario-guide.css?v=20261015g" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to the guide</a>
@@ -42,8 +42,9 @@
         <p>
           <strong>Choose the model revision explicitly.</strong> For new lessons with complete
           passenger cohorts, optional physical assumptions and event control, use the
-          <a href="#corrected">format 3 examples and reference</a>. The format 1 and 2 examples
-          below reproduce historical behavior. An old recipe can be converted in the lab with
+          <a href="#corrected">format 3 examples and reference</a>. The complete examples below use
+          the current model with 5-second stopping and starting delays. Saved format 1 and 2 recipes
+          still reproduce historical behavior. An old recipe can be converted with
           <strong>Make a corrected copy &amp; reset</strong>; its original is retained.
         </p>
       </div>
@@ -53,6 +54,7 @@
           <ol>
             <li><a href="#quick-start">Import your first lesson</a></li>
             <li><a href="#examples">Complete examples</a></li>
+            <li><a href="#lesson-pairs">Choose an illustrative lesson</a></li>
             <li><a href="#format">Set up the route</a></li>
             <li><a href="#timed-actions">Schedule timed actions</a></li>
             <li><a href="#recovery">Choose a recovery rule</a></li>
@@ -103,9 +105,9 @@
             <span class="section-number">02 / Ready to import</span>
             <h2 id="examples-title">Complete lessons to copy or download</h2>
             <p>
-              These examples are complete scenario files. Their downloadable JSON and the text shown
-              here are the same. The smaller code samples later in this guide are fragments to edit
-              inside a complete file.
+              These are complete format 3 scenario files with explicit model and observation
+              settings. Their downloadable JSON and the text shown here are the same. The smaller
+              code samples later in this guide are fragments to edit inside a complete file.
             </p>
             <article class="example" aria-labelledby="timed-example-title">
               <h3 id="timed-example-title">A baseline, then three timed actions</h3>
@@ -140,9 +142,10 @@
                   aria-label="Complete timed-actions scenario JSON"
                 ><code id="timed-example" data-example-file="./examples/timed-actions.json">{
   "format": "Bus Bunching Lab scenario",
-  "version": 1,
-  "name": "Baseline and three timed actions",
-  "description": "Begin with evenly spaced buses and fixed demand. At minute 20, hold Bus 1 for 60 seconds. At minute 30, double travel time on Bus 2's current or next segment. At minute 40, send Bus 1 past two stops after its current or next service stop. Compare the gaps and passenger costs before and after each action.",
+  "version": 3,
+  "notes": "Units: seconds from time zero; bus numbers start at 1. Model semantics is explicit. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. ordered-v3 until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. Missing maneuver fields in older v3 recipes mean zero. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "name": "Three timed interventions · protected drop-offs",
+  "description": "12 stops, 4 buses, fixed arrivals and four-stop rides, with 5-second stopping and starting delays. Hold Bus 1 for 60 seconds at minute 20, double Bus 2 travel at minute 30, then send Bus 1 past two locations at minute 40. Accepted drop-offs override skips; no forced transfers. This is an action-writing demonstration, not a recovery policy.",
   "setup": {
     "stops": 12,
     "buses": 4,
@@ -154,6 +157,20 @@
     "ride_length_stops": 4,
     "ride_pattern": "fixed",
     "random_seed": 42
+  },
+  "model": {
+    "semantics": "ordered-v3",
+    "stop_overhead_seconds": 0,
+    "stopping_delay_seconds": 5,
+    "starting_delay_seconds": 5,
+    "bus_capacity": null,
+    "allow_overtaking": true,
+    "calibration_notes": "Illustrative teaching model; not empirically calibrated."
+  },
+  "observation": {
+    "cohort_start_seconds": 0,
+    "arrival_cutoff_seconds": null,
+    "drain_max_seconds": 86400
   },
   "interventions": [
     {
@@ -181,12 +198,14 @@
               </details>
             </article>
             <article class="example" aria-labelledby="recovery-example-title">
-              <h3 id="recovery-example-title">Recover with alternating express</h3>
+              <h3 id="recovery-example-title">Alternating express: a partial correction</h3>
               <span class="tag">COMPLETE SCENARIO</span>
               <p>
                 Hold Bus 1 for 60 seconds at minute 20, then check for recovery opportunities every
                 30 seconds from minute 25 through minute 60. This example has no timed slowdown or
-                fixed-count express action.
+                fixed-count express action. Stopping and starting each cost five seconds at served
+                stops; protected drop-offs override skips. This lesson improves spacing only
+                partially, and riders left waiting still pay a cost.
               </p>
               <p class="hint">
                 For a fair test of recovery, compare this file against a copy with
@@ -221,9 +240,10 @@
                   aria-label="Complete recovery scenario JSON"
                 ><code id="recovery-example" data-example-file="./examples/alternating-recovery.json">{
   "format": "Bus Bunching Lab scenario",
-  "version": 1,
-  "name": "Recover with alternating express",
-  "description": "Start a 12-stop route with four evenly spaced buses, fixed demand and seed 42. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through minute 60, check every 30 seconds for buses with large forward gaps. Eligible buses alternate serving and skipping stops until their gap recovers. Compare transfers, waiting passengers, and total passenger time with the same delay and no recovery policy.",
+  "version": 3,
+  "notes": "Units: seconds from time zero; bus numbers start at 1. Model semantics is explicit. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. ordered-v3 until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. Missing maneuver fields in older v3 recipes mean zero. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "name": "Alternating express · partial recovery",
+  "description": "12 stops, 4 buses, 40-second segments, fixed arrivals at 3 passengers per stop per minute, four-stop rides, and 5-second stopping and starting delays. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 30 seconds. At service stops, buses with more than 3.75 stops ahead may alternate skipping and serving until the forward gap is at most 3.3 stops, with a 600-second cap. Accepted drop-offs remain served; one unrestricted bus remains. This gives partial correction in the default run, not a complete cure. Compare actual bypasses, passed-over riders and passenger time with One delay → bunching.",
   "setup": {
     "stops": 12,
     "buses": 4,
@@ -236,6 +256,20 @@
     "ride_pattern": "fixed",
     "random_seed": 42
   },
+  "model": {
+    "semantics": "ordered-v3",
+    "stop_overhead_seconds": 0,
+    "stopping_delay_seconds": 5,
+    "starting_delay_seconds": 5,
+    "bus_capacity": null,
+    "allow_overtaking": true,
+    "calibration_notes": "Illustrative teaching model; not empirically calibrated."
+  },
+  "observation": {
+    "cohort_start_seconds": 0,
+    "arrival_cutoff_seconds": null,
+    "drain_max_seconds": 86400
+  },
   "interventions": [
     {
       "at_seconds": 1200,
@@ -245,7 +279,8 @@
     }
   ],
   "recovery_policy": {
-    "rule": "alternating-express-v1",
+    "rule": "ordered-alternating-v3",
+    "rule_explanation": "Polling comparison: activate bounded alternating service above 125% of ideal forward gap; honor accepted drop-offs; stop acceleration when forward gap is at most 110% of ideal, or at expiry. Ordered immediate-neighbor gaps include the long convoy arc.",
     "start_seconds": 1500,
     "end_seconds": 3600,
     "check_every_seconds": 30
@@ -255,37 +290,41 @@
               </details>
             </article>
             <article class="example" aria-labelledby="v2-examples-title">
-              <h3 id="v2-examples-title">New: two gaps and passenger-preserving service</h3>
-              <span class="tag">COMPLETE VERSION 2 SCENARIOS</span>
+              <h3 id="v2-examples-title">Two gaps and passenger-preserving service</h3>
+              <span class="tag">COMPLETE VERSION 3 SCENARIOS</span>
               <p>
                 Each download matches a built-in lesson and stands on its own: 12 stops, four buses,
-                fixed arrivals and a 60-second Bus 1 hold at minute 20. Open the downloaded text
-                file, copy all its JSON, then import it as a preset. Keep the same setup and
-                disruption when comparing the three responses.
+                fixed arrivals, 5-second stopping and starting delays, and a 60-second Bus 1 hold at
+                minute 20. Open the downloaded text file, copy all its JSON, then import it as a
+                preset. Keep the same setup and disruption when comparing the three responses.
               </p>
               <ul>
                 <li>
                   <a href="./examples/two-gap-holds.json" download>Download two-gap-holds.json ↓</a
                   >: from minute 25 to minute 60, check every 15 seconds. Hold a bus for 30 seconds
-                  when its gap ahead is below 90% of ideal and its gap behind is above 110%.
+                  when its gap ahead is below 90% of ideal and its gap behind is above 110%. A
+                  90-second per-bus budget and cooldown limit recovery; this is a partial correction
+                  lesson, not a complete cure.
                 </li>
                 <li>
                   <a href="./examples/drop-off-only.json" download>Download drop-off-only.json ↓</a
-                  >: use the same checks, but look for a large gap ahead and small gap behind. Give
-                  qualifying buses three drop-off-only stop locations, capped at ten minutes.
+                  >: from minute 25 through 60, check every five seconds for a gap above 3.3 stops
+                  ahead and below 2.7 behind. Give qualifying buses one drop-off-only location, with
+                  a 900-second safety cap. Recheck conditions before another correction.
                 </li>
                 <li>
                   <a href="./examples/announced-skip.json" download
                     >Download announced-skip.json ↓</a
                   >: at minute 25, announce six lead-in stops for Bus 1, then serve every third stop
                   for 12 locations, capped at 30 minutes from announcement. This lesson uses a timed
-                  instruction, with no automatic recovery policy.
+                  instruction, with no automatic recovery policy. It demonstrates the cost of
+                  announcing too late: actual skips occur, but the default run does not recover.
                 </li>
               </ul>
               <p class="hint">
-                These new service modes honor accepted drop-offs. They can still leave waiting
-                passengers behind. Watch the pass-over counts, oldest queue wait and unfinished
-                trips as well as completed-passenger averages.
+                These current-model service modes honor accepted drop-offs. They can still leave
+                waiting passengers behind. Watch the pass-over counts, oldest queue wait and
+                unfinished trips as well as completed-passenger averages.
               </p>
             </article>
             <noscript
@@ -294,6 +333,89 @@
                 manually to copy it.
               </p></noscript
             >
+          </section>
+
+          <section class="guide-section" id="lesson-pairs" aria-labelledby="lesson-pairs-title">
+            <span class="section-number">Lesson choices</span>
+            <h2 id="lesson-pairs-title">Show recovery, then show its limits.</h2>
+            <p>
+              Every current built-in lesson includes five seconds to slow into each served stop and
+              five seconds to regain speed afterward. Start with
+              <a href="./examples/balanced-route.json" download>the complete balanced recipe</a>,
+              edit it, or export any loaded lesson. A genuine bypass avoids both penalties; an
+              accepted drop-off or manual stop hold makes the location served and pays both.
+            </p>
+            <ul>
+              <li>
+                <a href="./index.html?scenario=delay" target="_blank" rel="noopener"
+                  >One delay → bunching</a
+                >: a minute-20 hold compounds. Compare with
+                <a href="./examples/coordinated-holds.json" download>coordinated holds</a>, which
+                holds Buses 2–4 for 60 seconds at minute 25. This fixed script improves minutes
+                30–60 in the supplied setup; it is not an automatic dispatcher or permanent cure.
+              </li>
+              <li>
+                <a href="./examples/drop-off-only.json" download
+                  >One-stop drop-off-only correction</a
+                >
+                versus
+                <a href="./examples/dropoff-overcorrection.json" download>six-stop overcorrection</a
+                >: both can improve spacing, but the longer restriction increases passenger journey
+                time in this lesson. A lower headway-variation percentage is not enough evidence.
+              </li>
+              <li>
+                <a href="./examples/announced-skip.json" download>Six-stop notice</a> versus
+                <a href="./examples/short-announced-skips.json" download>short announced skips</a>:
+                the latter announces one lead-in location followed by a two-location skip/serve
+                pattern, rechecking both gaps before a later assignment. Both really bypass stops in
+                the supplied run; only the shorter strategy recovers spacing effectively.
+              </li>
+              <li>
+                <a href="./examples/corrected-boarding.json" download>Bounded boarding</a>
+                limits new boarding starts while keeping accepted drop-offs. The event controller
+                may cancel early when spacing recovers or eligible following service is inadequate.
+              </li>
+              <li>
+                <a href="./examples/corrected-holding.json" download>Short-trip event holds</a>
+                and
+                <a href="./examples/guarded-holds.json" download>holds declined by safeguards</a>
+                show how onboard cost changes a decision. These two lessons use different ride and
+                demand assumptions: compare each against its own uncontrolled copy, not directly
+                against one another.
+              </li>
+            </ul>
+            <p>
+              For a matched passenger comparison, retain the minute-20 Bus 1 hold and the exact
+              setup/seed. In the copy, set <code>recovery_policy</code> to <code>null</code> and
+              remove later recovery instructions (for coordinated holds, remove only the three
+              minute-25 holds). Use the same cohort boundary of 1,200 seconds and inclusive arrival
+              cutoff of 3,600 seconds, then drain both runs. Whole-journey means include the
+              original queue wait. Do not compare completed-only means while riders remain
+              unfinished. Random lessons reproduce seed 42; different seeds and settings can change
+              the outcome.
+            </p>
+            <details>
+              <summary>Historical example files</summary>
+              <p>
+                For reproducing earlier results only:
+                <a href="./examples/historical/timed-actions.json" download
+                  >version 1 timed actions</a
+                >,
+                <a href="./examples/historical/alternating-recovery.json" download
+                  >version 1 express</a
+                >,
+                <a href="./examples/historical/two-gap-holds.json" download
+                  >version 2 two-gap holds</a
+                >,
+                <a href="./examples/historical/drop-off-only.json" download
+                  >version 2 drop-off-only</a
+                >, and
+                <a href="./examples/historical/announced-skip.json" download
+                  >version 2 announced skips</a
+                >. These retain zero maneuver penalties and their original rules. They are not the
+                current built-in lessons.
+              </p>
+            </details>
           </section>
 
           <section class="guide-section" id="format" aria-labelledby="format-title">
@@ -325,10 +447,11 @@
                     <tr>
                       <td><code>version</code></td>
                       <td>
-                        <code>1</code> for the original actions and rules; <code>2</code> for
-                        two-gap conditions, drop-off-only service or announced patterns. Old version
-                        1 files still import with their original behavior. Export chooses version 2
-                        only when the lesson uses a new feature.
+                        Use <code>3</code> for current lessons, including maneuver penalties,
+                        protected drop-offs, corrected gap rules, bounded boarding and event
+                        control. Versions <code>1</code> and <code>2</code> retain the historical
+                        model and zero maneuver penalties. Export follows the explicit model;
+                        changing a version number alone does not convert a recipe.
                       </td>
                     </tr>
                     <tr>
@@ -344,6 +467,17 @@
                     <tr>
                       <td><code>setup</code></td>
                       <td>An object containing all ten route settings below.</td>
+                    </tr>
+                    <tr>
+                      <td><code>model</code> <em>(version 3)</em></td>
+                      <td>
+                        Explicit model semantics and physical assumptions; see the format 3
+                        reference.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>observation</code> <em>(version 3)</em></td>
+                      <td>Cohort boundary, arrival cutoff or null, and drain time bound.</td>
                     </tr>
                     <tr>
                       <td><code>interventions</code></td>
@@ -366,8 +500,9 @@
                 </table>
               </div>
               <p class="hint">
-                Every field above except <code>notes</code> is required. Empty intervention lists
-                and a <code>null</code> recovery policy must still be written explicitly.
+                Every field above except <code>notes</code> is required in version 3. Versions 1 and
+                2 omit <code>model</code> and <code>observation</code>. Empty intervention lists and
+                a <code>null</code> recovery policy must still be written explicitly.
               </p>
             </details>
             <details>
@@ -522,13 +657,14 @@
                 <code>stops</code> is an integer from 1 through <code>setup.stops − 1</code>. A
                 stopped bus serves its current stop, then skips that many consecutive stops. A
                 moving bus serves its next service stop first, then begins skipping. It still
-                travels every segment; skipping avoids stop service time.
+                travels every segment; a true bypass avoids service plus both maneuver penalties.
               </p>
               <p>
-                Before departure, onboard riders whose destinations will be skipped leave the bus
-                and rejoin the queue at the service stop. Waiting riders for those destinations do
-                not board this express bus. Transferred riders keep their original arrival time and
-                accumulated wait; they need another suitable bus to finish their trip.
+                In the current <code>ordered-v3</code> model, accepted destinations remain served as
+                protected drop-off-only exceptions. Waiting riders for a skipped destination do not
+                board. In historical version 1/2 lessons, riders bound for a skipped stop transfer
+                to the queue before departure instead, retaining their original birth and
+                accumulated wait clocks. Saved old lessons keep that historical behavior.
               </p>
               <p class="hint">
                 A timed express action is a fixed count. It does not wait for the gap to recover,
@@ -536,7 +672,7 @@
               </p>
             </details>
             <details>
-              <summary>Version 2: drop-off-only service</summary>
+              <summary>Drop-off-only service (formats 2 and 3)</summary>
               <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
               <pre
                 class="code"
@@ -559,7 +695,7 @@
               </p>
             </details>
             <details>
-              <summary>Version 2: announce a skip pattern in advance</summary>
+              <summary>Announce a skip pattern in advance (formats 2 and 3)</summary>
               <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
               <pre
                 class="code"
@@ -597,21 +733,23 @@
               </p>
               <p class="hint">
                 The bus still travels every route segment. Skipping saves service time, not
-                distance. New service modes do not force transfers; legacy <code>express</code>
-                retains its documented transfer behavior.
+                distance, and a true bypass avoids both stopping and starting penalties. In
+                ordered-v3, all these restrictions protect accepted drop-offs; historical
+                <code>express</code> retains its transfer behavior.
               </p>
             </details>
             <details>
-              <summary>Version 2: duration, recovery and returning to normal</summary>
+              <summary>Duration, recovery and returning to normal</summary>
               <p>
                 For either new service action, <code>until_recovered: true</code> ignores the stop
-                count and ends at an arrival when the gap ahead is at most 110% of ideal and the gap
-                behind is at least 90% of ideal. With <code>false</code>, use the fixed stop count,
-                or <code>null</code> for ongoing service. Ongoing service lasts until canceled or
-                its time cap expires. Every instruction requires <code>max_seconds</code>, a number
-                from 1 through 604,800. This cap starts at announcement and includes lead-in,
-                service and holds; it applies even if recovery never occurs. Reaching the cap
-                restores normal service.
+                count. Under <code>ordered-v3</code>, it ends at an arrival when the forward gap is
+                at most 110% of ideal; the historical model additionally requires at least 90% of
+                ideal behind. It is not “whichever comes first, count or recovery.” With
+                <code>false</code>, use the fixed stop count, or <code>null</code> for ongoing
+                service. Ongoing service lasts until canceled or its time cap expires. Every
+                instruction requires <code>max_seconds</code>, a number from 1 through 604,800. This
+                cap starts at announcement and includes lead-in, service and holds; it applies even
+                if recovery never occurs. Reaching the cap restores normal service.
               </p>
               <p><span class="tag">FRAGMENT · ONE INTERVENTION</span></p>
               <pre
@@ -635,11 +773,13 @@
 
           <section class="guide-section" id="recovery" aria-labelledby="recovery-title">
             <span class="section-number">05 / Automatic recovery</span>
-            <h2 id="recovery-title">Choose one versioned rule</h2>
+            <h2 id="recovery-title">Spatial polling rules and historical compatibility</h2>
             <p>
-              Set <code>recovery_policy</code> to <code>null</code>, choose an original version 1
-              rule, or configure <code>two-gap-v2</code> in a version 2 file. Original rule names
-              keep their thresholds and formulas. Editing <code>description</code>,
+              Set <code>recovery_policy</code> to <code>null</code> for no automatic dispatch.
+              Current lessons use the ordered-v3 rules or event controller described in the format 3
+              reference. The original <code>hold-v1</code>, express-v1 rules and
+              <code>two-gap-v2</code> rules apply to historical files; their names keep their
+              original thresholds and formulas. Editing <code>description</code>,
               <code>notes</code>, or optional <code>rule_explanation</code> text changes
               documentation only.
             </p>
@@ -656,24 +796,24 @@
               </p>
             </div>
             <details>
-              <summary>Version 2: test both gaps, then choose a response</summary>
+              <summary>Current model: test both gaps, then choose a response</summary>
               <p><span class="tag">FRAGMENT · REPLACE RECOVERY_POLICY</span></p>
               <pre
                 class="code"
                 tabindex="0"
                 aria-label="Two-gap recovery policy fragment"
               ><code>"recovery_policy": {
-  "rule": "two-gap-v2",
+  "rule": "ordered-two-gap-v3",
   "condition": {
     "ahead": "large", "behind": "small",
     "small_ratio": 0.9, "large_ratio": 1.1
   },
   "response": {
-    "action": "drop_off_only", "stops": 3,
-    "until_recovered": false, "max_seconds": 600
+    "action": "drop_off_only", "stops": 1,
+    "until_recovered": false, "max_seconds": 900
   },
   "start_seconds": 1500, "end_seconds": 3600,
-  "check_every_seconds": 15
+  "check_every_seconds": 5
 }</code></pre>
               <p>
                 Each direction is <code>"small"</code>, <code>"large"</code> or <code>"any"</code>;
@@ -701,14 +841,16 @@
                 activations; instructions already issued continue to their own ending or cap.
               </p>
               <p class="hint">
-                For holds, small ahead plus large behind is a useful starting condition. For
-                reducing boarding or skipping, try large ahead plus small behind. These are
-                experiments, not guarantees of better passenger outcomes.
+                Paste this into an ordered-v3 format 3 recipe. Historical version 2 files use
+                <code>two-gap-v2</code> instead and retain their older numerical rules. For holds,
+                small ahead plus large behind is a useful starting condition. For reducing boarding
+                or skipping, try large ahead plus small behind. These are experiments, not
+                guarantees of better passenger outcomes.
               </p>
             </details>
             <div class="rules">
               <details class="rule">
-                <summary><code>hold-v1</code> · rebuild space ahead</summary>
+                <summary>Historical <code>hold-v1</code> · rebuild space ahead</summary>
                 <p>
                   If the forward gap is <strong>less than 0.95 × ideal gap</strong>, hold the
                   eligible bus. The duration in seconds is:
@@ -724,7 +866,9 @@
                 </p>
               </details>
               <details class="rule">
-                <summary><code>alternating-express-v1</code> · recover a large gap</summary>
+                <summary>
+                  Historical <code>alternating-express-v1</code> · recover a large gap
+                </summary>
                 <p>
                   If the forward gap <strong>exceeds 1.25 × ideal gap</strong>, the eligible bus
                   serves the current stop, skips the next, and repeats this alternating pattern.
@@ -746,7 +890,9 @@
                 </p>
               </details>
               <details class="rule">
-                <summary><code>fixed-count-express-v1</code> · skip a calculated count</summary>
+                <summary>
+                  Historical <code>fixed-count-express-v1</code> · skip a calculated count
+                </summary>
                 <p>
                   If the forward gap <strong>exceeds 1.25 × ideal gap</strong>, the eligible bus
                   serves the current stop and then skips this many consecutive stops:
@@ -768,7 +914,7 @@
                 tabindex="0"
                 aria-label="Recovery policy fragment"
               ><code>"recovery_policy": {
-  "rule": "hold-v1",
+  "rule": "ordered-hold-v3",
   "start_seconds": 1500,
   "end_seconds": 3600,
   "check_every_seconds": 30
@@ -788,13 +934,16 @@
               <p>
                 The file must satisfy
                 <code>(end_seconds − start_seconds) ÷ check_every_seconds ≤ 10,000</code>, allowing
-                at most 10,001 checks. A recovery check at the same time as a listed action runs
-                first. These checks are separate from the 1,000-intervention limit.
+                at most 10,001 checks. Under ordered-v3, listed manual actions at a timestamp run
+                before its automatic decision batch, after mandatory arrivals and door completions.
+                Historical polling checks run before same-time listed actions. These checks are
+                separate from the 1,000-intervention limit.
               </p>
               <p class="hint">
                 <code>rule</code> and all three schedule fields are required. The optional
                 <code>rule_explanation</code> documents the rule; it cannot customize the formula.
-                Version 1 does not support custom rules or multiple recovery policies in one file.
+                These are polling fields. The event controller uses start/end and an options object
+                without <code>check_every_seconds</code>. Each recipe has one recovery policy.
               </p>
             </details>
           </section>
@@ -803,23 +952,27 @@
             <span class="section-number">New / Scenario format 3</span>
             <h2 id="corrected-title">Corrected control. Count every passenger.</h2>
             <p>
-              New lessons can explicitly choose <code>ordered-v3</code>. Saved version 1 and 2
-              lessons keep <code>legacy-v2</code> behavior so earlier experiments remain repeatable.
-              The older rule descriptions above explain those historical lessons. Use
+              All built-in teaching lessons now use <code>ordered-v3</code>, with stopping and
+              starting delays of five seconds each. Saved version 1 and 2 lessons keep
+              <code>legacy-v2</code> behavior so earlier experiments remain repeatable. The older
+              rule descriptions above explain those historical lessons. Use
               <strong>Make a corrected copy &amp; reset</strong> in the lab to create a separate
               version 3 recipe; keep the original when comparing outcomes.
             </p>
             <p>
               Start with a complete download, edit its text, then paste the whole file into
-              <strong>Import scenario</strong>. These examples use random demand and a common
-              minute-20 disruption, with an explicit arrival cutoff. All values are illustrative,
-              not calibrated observations or an optimized policy.
+              <strong>Import scenario</strong>. These examples share a minute-20 disruption but
+              deliberately vary their assumptions: the holding lesson uses fixed one-stop rides, the
+              boarding/pattern lessons use fixed four-stop rides, and the physical lesson uses
+              random demand. Each has an explicit minute-60 arrival cutoff. All values are
+              illustrative, not calibrated observations or an optimized policy.
             </p>
             <ul>
               <li>
                 <a href="./examples/corrected-holding.json" download
                   >Bounded passenger-cost holding</a
-                >: event decisions, hold budgets, and a finite cohort.
+                >: short fixed rides, event decisions, 60-second action/visit caps, a 900-second
+                per-bus budget and a finite cohort. This illustrates reduced onboard hold cost.
               </li>
               <li>
                 <a href="./examples/corrected-boarding.json" download
@@ -829,7 +982,8 @@
               <li>
                 <a href="./examples/corrected-pattern.json" download
                   >Announced pattern with eligible following service</a
-                >: advance notice and every-third-stop service.
+                >: two lead-in locations, then alternating service for up to six locations. Recovery
+                and coverage safeguards may end a plan before its first bypass.
               </li>
               <li>
                 <a href="./examples/corrected-physics.json" download
@@ -1003,7 +1157,7 @@
                     </tr>
                     <tr>
                       <td><code>stopping_delay_seconds</code></td>
-                      <td>0; 0–120 seconds</td>
+                      <td>5 in built-ins; 0 if omitted in older v3 files; 0–120 seconds</td>
                       <td>
                         Time lost entering a served stop, before overhead and door service. Zero for
                         a bypass.
@@ -1011,7 +1165,7 @@
                     </tr>
                     <tr>
                       <td><code>starting_delay_seconds</code></td>
-                      <td>0; 0–120 seconds</td>
+                      <td>5 in built-ins; 0 if omitted in older v3 files; 0–120 seconds</td>
                       <td>
                         Time lost regaining speed after a served stop, added to the following road
                         segment. Zero for a bypass.
@@ -1068,9 +1222,10 @@
                 the next linear travel segment after doors and holds finish. A nominal skip with a
                 protected drop-off or manual stop hold is a served stop and pays both. Initial buses
                 already traveling pay no starting penalty. Older version 3 recipes can omit these
-                two fields; they mean zero. New exports include them explicitly. Optional nondefault
-                physics require ordered-v3. Compare one assumption at a time; seat limits, overhead
-                and road queues can change which intervention helps.
+                two fields; they mean zero. New exports include them explicitly. Built-in lesson
+                values are five seconds each; these are lesson settings, not a new implicit import
+                default. Optional nondefault physics require ordered-v3. Compare one assumption at a
+                time; seat limits, overhead and road queues can change which intervention helps.
               </p>
             </details>
             <details>
@@ -1195,6 +1350,24 @@
                 repaired spatial gaps, bounded holds and accepted-drop-off protection; they do not
                 claim the destination-specific temporal safeguards of temporal-cost-v3.
               </p>
+              <p>
+                Ordered polling uses <code>ordered-hold-v3</code>,
+                <code>ordered-alternating-v3</code>, <code>ordered-count-v3</code>, or
+                <code>ordered-two-gap-v3</code>. The last uses the condition/response shape shown in
+                the current-model two-gap fragment above. Automatic holds are capped at 30 seconds
+                per action and 90 per bus, with two intervening stop visits; a coincident group
+                leader remains free. Event-controller options are independently configurable and the
+                short-trip lesson deliberately uses larger explicit budgets than the defaults in
+                this table.
+              </p>
+              <p>
+                Event-control restrictions can restore normal service when the forward gap is at
+                most 105% of ideal, or when coverage/denial safeguards fail. This is separate from a
+                manual instruction's <code>until_recovered</code> flag. Ending a polling schedule
+                stops new activations; a pending restriction finishes its own span/recovery/time
+                cap. Ending an event-control window releases its automatic components. Continuing a
+                lesson past its control window can allow bunching to return.
+              </p>
             </details>
           </section>
 
@@ -1305,6 +1478,6 @@
       Bus Bunching Lab · Scenario formats 1, 2 &amp; 3 · Explore the gaps. Measure the passenger
       cost.
     </footer>
-    <script type="module" src="./scenario-guide.js?v=20261015c"></script>
+    <script type="module" src="./scenario-guide.js?v=20261015g"></script>
   </body>
 </html>

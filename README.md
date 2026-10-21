@@ -8,13 +8,15 @@ Project author and direction: [MentalNomad](https://github.com/MentalNomad). Cod
 
 ## Explore and teach
 
-- Start with the balanced fixed-arrival route; watch buses, queues, and spacing, then adjust demand, travel, boarding, ride lengths, and stopping/starting delays.
-- Compare historical and corrected built-in scenarios, from a balanced baseline to random demand, selective holds, drop-off-only recovery, and announced skip patterns.
+- Start with the balanced fixed-arrival route and five-second stopping/starting delays; watch buses, queues, and spacing, then adjust the setup.
+- Compare current-model lessons covering disruptions, random demand, coordinated holds, drop-off-only recovery, announced skips, bounded boarding and safeguards. Counterexamples show why smoother spacing can still cost passengers more.
 - Hold buses, slow a segment, skip stops, or restrict boarding while preserving accepted drop-offs; rewind deterministically and branch an experiment with a new intervention.
 - Configure automatic responses to the gaps both ahead of and behind each bus. Announced patterns can start after a lead-in, serve every Kth stop, and finish after a span, recovery, cancellation, or a time cap.
 - Open a paused copy of the current state, export observations as CSV, and import or export reusable scenario JSON.
 
 The [educator scenario guide](dist/scenario-guide.html) explains the format, units, recovery rules, and validation limits, with examples to copy or download. Scenario exports restart at time zero; current-state copies preserve passengers and history. Custom scenarios are stored in the current browser, so export them for backup and sharing.
+
+The [lesson review](SCENARIOS.md) records the refreshed presets and complete matched-cohort comparisons. Run `npm run audit:scenarios` to reproduce it. Results apply to each lesson's setup and seed; recovery is not guaranteed after editing them. Export text to pin a lesson version, since built-in URLs open its current definition.
 
 Charts show dwell, queue wait, and total system time. Hover or tap to inspect an actual observation and the trailing average at that time; arrow keys also work on a focused graph. Intermediate playback speeds include 240×, 480× and 960× before Max. System time includes initial queue wait, boarding, riding, holds, transfers, and final debarking. Summary means include completed passengers only; current queue waits, repeated and unique passenger pass-overs, and passenger time accrued across completed and unfinished trips expose costs to people left waiting. Accrued time is displayed in passenger-minutes; CSV uses seconds and a separate count column. Whole-stop chart averages publish at departure and include complete passenger groups until at least the chosen window size is covered. Each-passenger mode uses exactly the last N observations.
 

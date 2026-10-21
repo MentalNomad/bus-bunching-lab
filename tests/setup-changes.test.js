@@ -17,11 +17,16 @@ function healthy(e) {
 }
 
 test('all built-in scenarios run at every stop/bus boundary combination with both demand patterns', () => {
-  for (const scenario of scenarios)
+  for (const scenario of scenarios.filter((s) => !s.aliasFor))
     for (const stops of [3, 40])
       for (const buses of [1, 16])
         for (const arrival of ['fixed', 'poisson']) {
           const config = { stops, buses, ride: Math.min(4, stops - 1), arrival };
+          // Explicit multi-bus scripts cannot silently discard future actions.
+          if (scenario.events.some((event) => event.bus >= buses)) {
+            assert.throws(() => new Experiment(config, scenario.id), /Bus \d+ does not exist/);
+            continue;
+          }
           // A saved announcement is explicit: shrinking the route must reject
           // its six-stop lead-in rather than silently change the lesson.
           if (scenario.id === 'announced-express' && stops <= 6) {
@@ -104,7 +109,7 @@ test('changing an imported preset rejects missing future buses and oversized fut
   valid.advanceTo(1800);
   healthy(valid);
   assert(valid.sim.log.some((x) => x.message.includes('hold 60s')));
-  assert(valid.sim.log.some((x) => x.message.includes('past 5 stops')));
+  assert(valid.sim.log.some((x) => x.t === 900 && x.message.includes('5 pattern locations')));
 });
 test('invalid future hold, slowdown and time fail before a scenario starts', () => {
   for (const event of [

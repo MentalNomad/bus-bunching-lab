@@ -1,8 +1,9 @@
 {
   "format": "Bus Bunching Lab scenario",
-  "version": 1,
-  "name": "Recover with alternating express",
-  "description": "Start a 12-stop route with four evenly spaced buses, fixed demand and seed 42. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through minute 60, check every 30 seconds for buses with large forward gaps. Eligible buses alternate serving and skipping stops until their gap recovers. Compare transfers, waiting passengers, and total passenger time with the same delay and no recovery policy.",
+  "version": 3,
+  "notes": "Units: seconds from time zero; bus numbers start at 1. Model semantics is explicit. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. ordered-v3 until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. Missing maneuver fields in older v3 recipes mean zero. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "name": "Alternating express · partial recovery",
+  "description": "12 stops, 4 buses, 40-second segments, fixed arrivals at 3 passengers per stop per minute, four-stop rides, and 5-second stopping and starting delays. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 30 seconds. At service stops, buses with more than 3.75 stops ahead may alternate skipping and serving until the forward gap is at most 3.3 stops, with a 600-second cap. Accepted drop-offs remain served; one unrestricted bus remains. This gives partial correction in the default run, not a complete cure. Compare actual bypasses, passed-over riders and passenger time with One delay → bunching.",
   "setup": {
     "stops": 12,
     "buses": 4,
@@ -15,6 +16,20 @@
     "ride_pattern": "fixed",
     "random_seed": 42
   },
+  "model": {
+    "semantics": "ordered-v3",
+    "stop_overhead_seconds": 0,
+    "stopping_delay_seconds": 5,
+    "starting_delay_seconds": 5,
+    "bus_capacity": null,
+    "allow_overtaking": true,
+    "calibration_notes": "Illustrative teaching model; not empirically calibrated."
+  },
+  "observation": {
+    "cohort_start_seconds": 0,
+    "arrival_cutoff_seconds": null,
+    "drain_max_seconds": 86400
+  },
   "interventions": [
     {
       "at_seconds": 1200,
@@ -24,7 +39,8 @@
     }
   ],
   "recovery_policy": {
-    "rule": "alternating-express-v1",
+    "rule": "ordered-alternating-v3",
+    "rule_explanation": "Polling comparison: activate bounded alternating service above 125% of ideal forward gap; honor accepted drop-offs; stop acceleration when forward gap is at most 110% of ideal, or at expiry. Ordered immediate-neighbor gaps include the long convoy arc.",
     "start_seconds": 1500,
     "end_seconds": 3600,
     "check_every_seconds": 30

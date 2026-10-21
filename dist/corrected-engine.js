@@ -3,9 +3,9 @@ import {
   MAX_SIMULATION_SECONDS,
   MAX_PASSENGERS,
   MAX_STOP_VISITS,
-} from './legacy-engine.js?v=20261015c';
-import { normalizeModelOptions } from './model-options.js?v=20261015c';
-import { normalizeServiceAction } from './service-plan.js?v=20261015c';
+} from './legacy-engine.js?v=20261015g';
+import { normalizeModelOptions } from './model-options.js?v=20261015g';
+import { normalizeServiceAction } from './service-plan.js?v=20261015g';
 import {
   configureTemporalController,
   evaluateControllerBatch,
@@ -14,7 +14,7 @@ import {
   recordControllerDenial,
   recordControllerBoarding,
   recordControllerHoldDelay,
-} from './controller.js?v=20261015c';
+} from './controller.js?v=20261015g';
 
 // Stop positions increase around the route. Equal positions sort by ascending ID:
 // the last tied ID owns the empty forward arc, and the earlier IDs follow it.

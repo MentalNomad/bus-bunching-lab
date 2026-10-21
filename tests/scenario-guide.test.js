@@ -59,14 +59,18 @@ test('the timed lesson demonstrates all three actions and the recovery lesson is
   assert.equal(timed.policy, undefined);
   assert.deepEqual(recovery.config, timed.config);
   assert.deepEqual(recovery.events, [timed.events[0]]);
-  assert.equal(recovery.policy, 'express');
+  assert.equal(recovery.policy, 'ordered-express');
   const run = new Experiment(recovery.config, 'guide-recovery', recovery);
   const checks = run.events.filter((event) => event.type === 'policy');
   assert.equal(checks.length, 71);
   assert.equal(checks[0].t, 1500);
   assert.equal(checks.at(-1).t, 3600);
   run.advanceTo(3600);
-  assert(run.sim.transfers > 0, 'the recovery example should expose the transfer tradeoff');
+  assert.equal(run.sim.transfers, 0, 'current-model lessons protect accepted drop-offs');
+  assert(
+    run.sim.passedOver > 0,
+    'the recovery example should expose the waiting-passenger tradeoff',
+  );
 });
 
 test('guide assets, downloads, and navigation work below a hosting subpath', async () => {
@@ -89,8 +93,14 @@ test('guide assets, downloads, and navigation work below a hosting subpath', asy
   assert.match(guide, /Open a new lab tab/);
 });
 
-test('every inline intervention and recovery fragment is valid in a complete version 2 recipe', async () => {
-  const base = JSON.parse(
+test('every inline fragment is valid in its declared current or historical model', async () => {
+  const historical = JSON.parse(
+    await readFile(
+      new URL('../dist/examples/historical/announced-skip.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const current = JSON.parse(
     await readFile(new URL('../dist/examples/announced-skip.json', import.meta.url), 'utf8'),
   );
   let checked = 0;
@@ -98,8 +108,10 @@ test('every inline intervention and recovery fragment is valid in a complete ver
     /<pre\b[^>]*>\s*<code\b([^>]*)>([\s\S]*?)<\/code>\s*<\/pre>/g,
   )) {
     if (attributes.includes('data-example-file')) continue;
-    const data = structuredClone(base);
     const fragment = text.trim();
+    const data = structuredClone(
+      fragment.includes('-v1') || fragment.includes('two-gap-v2') ? historical : current,
+    );
     if (fragment.startsWith('"recovery_policy"')) {
       data.recovery_policy = JSON.parse(`{${fragment}}`).recovery_policy;
       data.interventions = [];

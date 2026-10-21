@@ -1,5 +1,5 @@
 /* Discrete-event model. Times are seconds; unlimited capacity; FIFO queues. */
-import { normalizeServiceAction } from './service-plan.js?v=20261015c';
+import { normalizeServiceAction } from './service-plan.js?v=20261015g';
 export const MAX_SIMULATION_SECONDS = 604800;
 export const MAX_COMBINED_DELAY = MAX_SIMULATION_SECONDS;
 export const MAX_PASSENGERS = 250000;

@@ -13,7 +13,11 @@ two-sided recovery checks, sampled dispatch, and express transfers. The legacy
 adapter adds measurement ledgers and optional finite demand without changing old
 numerical outcomes. New corrected presets and format 3 documents explicitly declare
 `semantics: "ordered-v3"`. Converting creates a separate recipe; it does not alter
-the old preset or claim that its outcomes should match.
+the saved original or claim that its outcomes should match. Current built-in
+definitions live in `scenarios.js` and may evolve; export a complete recipe to
+pin a version. `historical-scenarios.js` preserves pre-recipe copies whose
+payload predates embedded scenario text. Current teaching presets all use
+five-second stopping and starting delays. Import/engine defaults remain zero.
 
 Corrected free-overtaking gaps sort a copy of displayed positions, then exact ties
 by ascending bus ID. Each bus has one immediate successor and predecessor. The
@@ -26,7 +30,9 @@ and unwrapped positions retain the physical leader when a queue meets across the
 route seam; sorting tied displayed positions alone would lose that information.
 
 All corrected manual `until_recovered` instructions end when the immediate
-forward gap is at most 110% of `stops / buses`, or at expiry/span completion.
+forward gap is at most 110% of `stops / buses`, or at expiry. With
+`until_recovered: true`, the stop-span count is ignored; with false it bounds
+the instruction instead of testing recovery.
 A tail bus can finish recovery with a large rear gap. A convoy leader still owns
 the long gap and does not falsely recover. Historical instructions retain their
 declared legacy semantics.
@@ -189,7 +195,8 @@ all service and holds to the next segment duration. Motion on that segment stays
 linear at its effective speed: these are lumped time penalties, not a physical
 acceleration model. Initial buses already traveling pay no starting penalty.
 Genuinely skipped stops pay neither maneuver penalty. Empty served stops and
-protected drop-offs pay both. The two inputs default to zero; nonzero values
+protected drop-offs pay both. Raw model/import defaults are zero; built-in
+lesson inputs start at five seconds each. Nonzero values
 require ordered-v3, preserving historical recipes and the frozen research.
 
 Overhead precedes sequential boarding/alighting and overlaps hold deadlines.
@@ -258,8 +265,14 @@ movement, at most once per animation frame; simulation state remains untouched.
 Keyboard left/right, Home/End and Escape work on focused charts.
 
 Initial navigation without a valid scenario selects balanced-corrected, named
-Balanced · fixed arrivals. The historical balanced ID remains available for old
-links and saved lessons. Dispatch history is third by default on both desktop
+Balanced · fixed arrivals, with five seconds for each maneuver. Old balanced
+and corrected-variance URLs resolve to current canonical lessons without picker
+duplicates; saved text/copies retain their own explicit settings. Dispatch history is third by default on both desktop
 and mobile; moving a section prevents breakpoint changes from restoring defaults.
 Playback adds 240×, 480×, 960× and uses bounded short bursts at every multiplier,
 yielding under heavy load without accumulating a backlog after a pause.
+
+The `Elapsed Time` chart readout is an inspection cursor, not a simulation
+advance. `tools/audit-scenarios.mjs` checks complete matched passenger cohorts,
+pre-drain spatial outcomes, actual bypasses and accounting for the refreshed
+catalog. `SCENARIOS.md` records the lesson-specific evidence and its limits.

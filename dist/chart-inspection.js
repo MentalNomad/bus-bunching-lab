@@ -95,7 +95,7 @@ function show(state) {
   state.line.style.top = `${m.top}px`;
   state.line.style.height = `${m.bottom - m.top}px`;
   const { observation: p, average } = result;
-  state.title.textContent = `Simulation ${clock(result.time)}`;
+  state.title.textContent = `Elapsed Time ${clock(result.time)}`;
   state.observation.textContent = p
     ? `Nearest observation: ${p.v.toFixed(1)} s · at ${clock(p.t)}${p.v > m.max ? ' (above axis)' : ''}`
     : 'No individual observation in the visible time window';

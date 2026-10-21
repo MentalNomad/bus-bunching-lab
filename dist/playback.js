@@ -1,4 +1,4 @@
-import { MAX_SIMULATION_SECONDS } from './engine.js?v=20261015c';
+import { MAX_SIMULATION_SECONDS } from './engine.js?v=20261015g';
 
 // Leave time for rendering and input between bursts. One simulated second per
 // chunk also limits how much event work happens before checking the clock again.

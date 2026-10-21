@@ -1,9 +1,9 @@
 {
   "format": "Bus Bunching Lab scenario",
   "version": 3,
-  "notes": "Units: seconds from time zero; bus numbers start at 1. Model semantics is explicit. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. ordered-v3 until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Overhead precedes sequential door service and overlaps holds. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
-  "name": "Explore � seats, stop overhead and road order",
-  "description": "12 stops, 4 buses, seed 42, random demand, 30 seats per bus, 8 seconds of overhead before door service, and no overtaking on roads. Multiple buses can serve the same stop. A 60-second hold affects Bus 1 at minute 20. No automatic control. Demand ends at minute 60. These values are illustrative; change one physical assumption at a time and inspect unfinished trips and capacity denials.",
+  "notes": "Units: seconds from time zero; bus numbers start at 1. Model semantics is explicit. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. ordered-v3 until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. Missing maneuver fields in older v3 recipes mean zero. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "name": "Explore · seats, stop overhead and road order",
+  "description": "12 stops, 4 buses, 40-second segments, seed 42, random arrivals and rides, 5-second stopping and starting delays, 30 seats, an additional 8 seconds of fixed stop overhead, and no overtaking on roads. Multiple buses may serve one stop. Hold Bus 1 for 60 seconds at minute 20; no automatic control. Arrivals end at minute 60. Even-looking gaps can hide long capacity waits: inspect pass-overs, unfinished riders and drained whole-journey times. Change one physical assumption at a time; values are illustrative, not calibrated.",
   "setup": {
     "stops": 12,
     "buses": 4,
@@ -19,9 +19,11 @@
   "model": {
     "semantics": "ordered-v3",
     "stop_overhead_seconds": 8,
+    "stopping_delay_seconds": 5,
+    "starting_delay_seconds": 5,
     "bus_capacity": 30,
     "allow_overtaking": false,
-    "calibration_notes": "Illustrative 30-seat, 8-second teaching example; not calibrated against an observed route."
+    "calibration_notes": "Illustrative 30-seat, 8-second overhead and 5+5-second maneuver teaching example; not empirically calibrated."
   },
   "observation": {
     "cohort_start_seconds": 1200,

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { Experiment, scenarios } from '../dist/experiment.js';
+import { historicalScenarios } from '../dist/historical-scenarios.js';
 import { serializeScenario, parseScenario, convertScenario } from '../dist/scenario-format.js';
 import { summarizeCohort } from '../dist/measurements.js';
 
@@ -13,7 +14,7 @@ test('corrected scenarios declare every model assumption, temporal option and fi
   assert.equal(data.model.semantics, 'ordered-v3');
   assert.equal(data.recovery_policy.rule, 'temporal-cost-v3');
   assert.equal(data.recovery_policy.options.decisionMode, 'events');
-  assert.equal(data.observation.arrival_cutoff_seconds, 7200);
+  assert.equal(data.observation.arrival_cutoff_seconds, 3600);
   const definition = parseScenario(text);
   const copy = new Experiment(definition.config, 'custom', definition);
   e.advanceTo(1800);
@@ -28,7 +29,8 @@ test('corrected scenarios declare every model assumption, temporal option and fi
 
 test('historical scenarios retain their versions and conversion preserves the original', () => {
   for (const id of ['holds', 'two-gap-holds', 'announced-express']) {
-    const e = new Experiment({}, id);
+    const historical = historicalScenarios.find((s) => s.id === id);
+    const e = new Experiment({}, id, historical);
     const before = structuredClone(e.definition);
     const data = JSON.parse(serializeScenario(e.definition, e.config));
     assert.ok([1, 2].includes(data.version));
@@ -37,7 +39,7 @@ test('historical scenarios retain their versions and conversion preserves the or
     assert.deepEqual(e.definition, before);
     assert.equal(JSON.parse(serializeScenario(d, d.config)).version, 3);
     assert.doesNotThrow(() => new Experiment(d.config, d.id, d));
-    assert.throws(() => new Experiment({ semantics: 'ordered-v3' }, id), /semantics/);
+    assert.throws(() => new Experiment({ semantics: 'ordered-v3' }, id, historical), /semantics/);
   }
 });
 
@@ -45,6 +47,7 @@ test('a finite legacy comparison retains historical numerical rules and exports 
   const e = new Experiment(
     { semantics: 'legacy-v2', arrivalCutoff: 1500, cohortStart: 1200 },
     'delay',
+    historicalScenarios.find((s) => s.id === 'delay'),
   );
   const d = parseScenario(serializeScenario(e.definition, e.config));
   assert.equal(d.config.semantics, 'legacy-v2');
@@ -100,7 +103,7 @@ test('v3 strict validation rejects incompatible versions and malformed options b
       d.observation.cohort_start_seconds = 1300;
     },
     (d) => {
-      d.observation.arrival_cutoff_seconds = 7000;
+      d.observation.arrival_cutoff_seconds = 3500;
     },
     (d) => {
       d.recovery_policy.options.extra = 1;

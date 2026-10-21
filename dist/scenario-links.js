@@ -1,24 +1,10 @@
-export const builtInScenarioIds = [
-  'balanced-corrected',
-  'balanced',
-  'delay',
-  'variance',
-  'holds',
-  'express',
-  'express-count',
-  'two-gap-holds',
-  'dropoff',
-  'announced-express',
-  'corrected-variance',
-  'temporal-recovery',
-  'temporal-boarding',
-  'temporal-pattern',
-  'physical-assumptions',
-];
+import { scenarios } from './scenarios.js?v=20261015g';
+export const builtInScenarioIds = scenarios.map((s) => s.id);
 export function scenarioFromSearch(search) {
   const id = new URLSearchParams(search).get('scenario');
+  const scenario = scenarios.find((s) => s.id === id && builtInScenarioIds.includes(id));
   return {
-    id: builtInScenarioIds.includes(id) ? id : 'balanced-corrected',
+    id: scenario?.aliasFor ?? scenario?.id ?? 'balanced-corrected',
     invalid: id !== null && !builtInScenarioIds.includes(id),
   };
 }

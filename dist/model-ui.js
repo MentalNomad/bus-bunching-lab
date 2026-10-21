@@ -1,14 +1,14 @@
-import { convertScenario } from './scenario-format.js?v=20261015c';
+import { convertScenario } from './scenario-format.js?v=20261015g';
 import {
   normalizeControllerOptions,
   defaultControllerOptions,
-} from './controller-options.js?v=20261015c';
+} from './controller-options.js?v=20261015g';
 import {
   summarizeCohort,
   compareCohorts,
   measurementExport,
   measurementCSV,
-} from './measurements.js?v=20261015c';
+} from './measurements.js?v=20261015g';
 
 // All controls go through Experiment, including replay validation. Text from
 // imported scenarios is assigned with textContent, never interpreted as markup.
