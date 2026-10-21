@@ -28,7 +28,7 @@ Optional stopping/starting delays (zero at skipped stops), fixed stop overhead, 
 
 ## Run locally
 
-Use Python 3 to serve the site. Node.js 24 is recommended for development and tests. From the directory containing `package.json`:
+Use Python 3 to serve the site. Development requires a patched Node.js release: 24.22.1 or later in the 24 LTS line, or 26.12.1 or newer. These minimums include the October 2026 certificate-trust security fixes. From the directory containing `package.json`:
 
 ```sh
 npm ci
@@ -36,6 +36,8 @@ npm test
 npm run format:check
 npm start
 ```
+
+The project disables dependency installation scripts, requires HTTPS certificate validation, and rejects older Node.js runtimes during npm installation. The Pages workflow also audits dependencies before publishing. Python serves local files only; it does not install packages or fetch remote assets for this project.
 
 Open [localhost:8080](http://127.0.0.1:8080). `npm run format` applies consistent formatting. Prettier is a development dependency; the browser app has no JavaScript runtime dependencies or build step.
 
