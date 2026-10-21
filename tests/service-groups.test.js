@@ -48,7 +48,6 @@ test('alternating recovery plans only the next skipped stop and stops when targe
   s.advance(10);
   s.action(0, 'recovery', 1);
   s.advance(10);
-  assert.equal(s.buses[0].recoveryExpress, false);
-  assert.equal(s.buses[0].express, 0);
+  assert.equal(s.buses[0].servicePlan, null);
   assert(s.log.some((x) => x.message.includes('normal service resumes')));
 });

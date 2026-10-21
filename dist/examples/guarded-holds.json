@@ -1,7 +1,6 @@
 {
   "format": "Bus Bunching Lab scenario",
-  "version": 3,
-  "notes": "Units: seconds from time zero; bus numbers start at 1. Model semantics is explicit. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. ordered-v3 until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. Missing maneuver fields in older v3 recipes mean zero. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "notes": "Units: seconds from time zero; bus numbers start at 1. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
   "name": "Safeguards · when holds are declined",
   "description": "12 stops, 4 buses, 40-second segments, Poisson arrivals averaging 3 per stop per minute, varied four-stop rides, seed 42 and 5-second stopping and starting delays. Hold Bus 1 for 60 seconds at minute 20. From minute 25 to 60, the event controller considers holds capped at 30 seconds per action, 45 per visit and 90 per bus, with two visits of cooldown and a 300-second follower horizon. In this seed it declines automatic holds: service often absorbs them or estimated passenger benefit is insufficient. This is a safeguard/failure-to-recover lesson, not a cure. Arrivals end at minute 60; inspect the decision log and unfinished passengers, then drain.",
   "setup": {
@@ -17,7 +16,6 @@
     "random_seed": 42
   },
   "model": {
-    "semantics": "ordered-v3",
     "stop_overhead_seconds": 0,
     "stopping_delay_seconds": 5,
     "starting_delay_seconds": 5,
@@ -39,7 +37,7 @@
     }
   ],
   "recovery_policy": {
-    "rule": "temporal-cost-v3",
+    "rule": "passenger-cost",
     "rule_explanation": "Event-based heuristic at stop arrivals and release opportunities. Use observed usable service and predicted eligible follower times, bounded onboard-cost versus queue-benefit holding, repeat budgets, destination-specific coverage and repeated-denial safeguards. Unknown or unsuitable coverage restores normal service. Predictions use current information, not future demand. This is illustrative and not an optimizer.",
     "start_seconds": 1500,
     "end_seconds": 3600,

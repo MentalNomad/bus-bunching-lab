@@ -1,14 +1,13 @@
-import { convertScenario } from './scenario-format.js?v=20261015g';
 import {
   normalizeControllerOptions,
   defaultControllerOptions,
-} from './controller-options.js?v=20261015g';
+} from './controller-options.js?v=20261021a';
 import {
   summarizeCohort,
   compareCohorts,
   measurementExport,
   measurementCSV,
-} from './measurements.js?v=20261015g';
+} from './measurements.js?v=20261021a';
 
 // All controls go through Experiment, including replay validation. Text from
 // imported scenarios is assigned with textContent, never interpreted as markup.
@@ -24,7 +23,7 @@ export function setupModelControls({ getExperiment, install, pause, render }) {
     'Accrued passenger-seconds':
       'Sum of each cohort passenger’s completed journey time or elapsed time since original birth. Includes initial queue wait. Compare incomplete runs only at the same horizon and matched demand.',
     'Queue passenger-seconds':
-      'Sum of original queue waiting across the cohort. Queue time ends when boarding starts; transferring never resets the original journey clock.',
+      'Sum of original queue waiting across the cohort. Queue time ends when boarding starts; boarding ends the queue wait.',
     'Onboard passenger-seconds':
       'Accrued cohort time outside queues: boarding, road travel, onboard holds and final alighting. Includes work already in progress at the observation time.',
     'Complete-cohort mean':
@@ -37,8 +36,6 @@ export function setupModelControls({ getExperiment, install, pause, render }) {
   const details = document.createElement('details');
   details.id = 'modelControls';
   details.innerHTML = `<summary>Model, assumptions & observation horizon</summary>
-    <p id="modelRevision" class="hint"></p><button type="button" id="convertModel">Make a corrected copy & reset</button>
-    <p class="hint">Old scenarios retain historical behavior. Conversion makes a new lesson. Physical settings below require the corrected model.</p>
     <label>Stop overhead <span>seconds before doors, 0–120</span><input name="stopOverhead" type="number" min="0" max="120" step="any" value="0" required></label>
     <label>Bus capacity <span>seats; blank = unlimited</span><input name="capacity" type="number" min="1" max="500" step="1"></label>
     <label>Road overtaking<select name="overtaking"><option value="true">Allowed</option><option value="false">Prevent overtaking</option></select></label>
@@ -47,12 +44,10 @@ export function setupModelControls({ getExperiment, install, pause, render }) {
     <label>Input provenance <span>1,000 characters max</span><textarea name="provenance" maxlength="1000" rows="3"></textarea></label>
     <p class="hint">Overhead occurs once per served visit, even when empty, before door service; holds overlap it. Seats are reserved when boarding starts. Preventing overtaking constrains road motion; several buses may still serve a stop. With no overtaking, the temporal controller conservatively keeps normal service because a reliable joint road forecast is unavailable. Manual controls still work. Example values are illustrative, not measured calibration.</p>`;
   $('config').insertBefore(details, $('config').querySelector('button[type="submit"]'));
-  $('config').insertBefore($('modelRevision'), details);
-  $('enableManeuvers').onclick = () => $('convertModel').click();
 
   const controller = document.createElement('details');
   controller.id = 'temporalControls';
-  controller.innerHTML = `<summary>Event-based passenger-cost controller</summary><p class="hint">Use observed usable-service history and predicted eligible followers. Missing evidence keeps normal service. Bounded holds and service restrictions are teaching heuristics; they can increase passenger time.</p><form id="temporalPolicy"><div class="two"><label>Start <span>simulation seconds, inclusive</span><input id="temporalStart" type="number" min="0" max="604800" value="1500" required></label><label>End <span>simulation seconds, exclusive</span><input id="temporalEnd" type="number" min="0" max="604800" value="7200" required></label></div><div id="temporalFields"></div><button type="submit">Apply event controller & reset</button></form><p><a href="scenario-guide.html#corrected" target="_blank" rel="noopener">Model and controller guide ↗</a></p>`;
+  controller.innerHTML = `<summary>Event-based passenger-cost controller</summary><p class="hint">Use observed usable-service history and predicted eligible followers. Missing evidence keeps normal service. Bounded holds and service restrictions are teaching heuristics; they can increase passenger time.</p><form id="temporalPolicy"><div class="two"><label>Start <span>simulation seconds, inclusive</span><input id="temporalStart" type="number" min="0" max="604800" value="1500" required></label><label>End <span>simulation seconds, exclusive</span><input id="temporalEnd" type="number" min="0" max="604800" value="7200" required></label></div><div id="temporalFields"></div><button type="submit">Apply event controller & reset</button></form><p><a href="scenario-guide.html#controller" target="_blank" rel="noopener">Model and controller guide ↗</a></p>`;
   document.querySelector('.dispatch').insertBefore(controller, $('message'));
   const labels = {
     response: [
@@ -185,25 +180,15 @@ export function setupModelControls({ getExperiment, install, pause, render }) {
     d.events.push(...structuredClone(e.commands));
     return d;
   }
-  $('convertModel').onclick = () =>
-    act(() => {
-      const e = getExperiment(),
-        d = convertScenario(editedDefinition(), e.config);
-      install(d);
-      $('message').textContent = 'Created a corrected copy. The original scenario is retained.';
-    });
   $('temporalPolicy').onsubmit = (event) => {
     event.preventDefault();
     act(() => {
       const e = getExperiment();
-      if (e.config.semantics !== 'ordered-v3')
-        throw Error('Make a corrected copy first to use event control.');
       const raw = Object.fromEntries(new FormData(event.target));
       for (const key of Object.keys(raw))
         if (!['response', 'decisionMode'].includes(key)) raw[key] = Number(raw[key]);
       const d = editedDefinition();
-      d.policy = 'temporal-v3';
-      d.formatVersion = 3;
+      d.policy = 'temporal';
       d.policyOptions = normalizeControllerOptions(raw, e.config);
       d.policySchedule = {
         start: Number($('temporalStart').value),
@@ -362,11 +347,7 @@ export function setupModelControls({ getExperiment, install, pause, render }) {
   };
   function sync() {
     const e = getExperiment(),
-      c = e.config,
-      ordered = c.semantics === 'ordered-v3';
-    $('modelRevision').textContent = ordered
-      ? 'Model: ordered-v3 · deterministic circular neighbors and corrected recovery.'
-      : 'Model: legacy-v2 · historical gaps, recovery and polling preserved.';
+      c = e.config;
     for (const key of [
       'stopOverhead',
       'stoppingDelay',
@@ -390,18 +371,9 @@ export function setupModelControls({ getExperiment, install, pause, render }) {
           cohortStart: 0,
           provenance: 'Illustrative teaching model; not empirically calibrated.',
         }[key];
-      field.disabled =
-        !ordered &&
-        ['stopOverhead', 'stoppingDelay', 'startingDelay', 'capacity', 'overtaking'].includes(key);
     }
-    $('convertModel').disabled = ordered;
-    $('legacyManeuverHint').hidden = ordered;
-    $('temporalPolicy').querySelector('button').disabled = !ordered;
-    $('manualBoarding').disabled = !ordered;
     const options =
-      e.definition.policy === 'temporal-v3'
-        ? e.definition.policyOptions
-        : defaultControllerOptions();
+      e.definition.policy === 'temporal' ? e.definition.policyOptions : defaultControllerOptions();
     for (const [key, value] of Object.entries(options))
       if ($('temporalPolicy').elements[key]) $('temporalPolicy').elements[key].value = value;
     $('temporalStart').value = e.definition.policySchedule?.start ?? 1500;
@@ -409,10 +381,8 @@ export function setupModelControls({ getExperiment, install, pause, render }) {
     observedSim = null;
   }
   function readConfig(c) {
-    const e = getExperiment();
     return {
       ...c,
-      semantics: e.config.semantics ?? 'legacy-v2',
       stopOverhead: Number(c.stopOverhead ?? 0),
       stoppingDelay: Number(c.stoppingDelay ?? 0),
       startingDelay: Number(c.startingDelay ?? 0),
@@ -458,7 +428,7 @@ export function setupModelControls({ getExperiment, install, pause, render }) {
     }
     const checks = m.diagnostics;
     $('controllerStatus').textContent =
-      `Conservation ${checks.conserved ? 'passes' : 'FAILED'}; independent time integrals ${checks.passengerTimeIntegral && checks.queueTimeIntegral && checks.onboardTimeIntegral ? 'agree' : 'FAILED'}. Policy denials: ${s.policyDenials ?? 'historical combined counts'}; capacity denials: ${s.capacityDenials ?? 0}. Automatic holding requested ${s.autoHoldRequested ?? 0} s; realized extra dwell ${s.autoHoldRealized ?? 0} s. ${s.controller ? `Denial safeguard breaches: ${s.controller.metrics.serviceGapBreaches}; completed destination-service intervals above the configured gap limit: ${s.controller.metrics.observedServiceGapBreaches ?? 0}; maximum repeated denials ${s.controller.metrics.maximumRepeatedDenials}; longest observed destination-eligible service gap ${s.controller.metrics.maximumObservedEligibleServiceGap.toFixed(1)} s.` : 'No temporal controller active.'}`;
+      `Conservation ${checks.conserved ? 'passes' : 'FAILED'}; independent time integrals ${checks.passengerTimeIntegral && checks.queueTimeIntegral && checks.onboardTimeIntegral ? 'agree' : 'FAILED'}. Policy denials: ${s.policyDenials}; capacity denials: ${s.capacityDenials ?? 0}. Automatic holding requested ${s.autoHoldRequested ?? 0} s; realized extra dwell ${s.autoHoldRealized ?? 0} s. ${s.controller ? `Denial safeguard breaches: ${s.controller.metrics.serviceGapBreaches}; completed destination-service intervals above the configured gap limit: ${s.controller.metrics.observedServiceGapBreaches ?? 0}; maximum repeated denials ${s.controller.metrics.maximumRepeatedDenials}; longest observed destination-eligible service gap ${s.controller.metrics.maximumObservedEligibleServiceGap.toFixed(1)} s.` : 'No temporal controller active.'}`;
     $('controllerEvidence').textContent =
       s.controller?.decisions
         .slice(-12)

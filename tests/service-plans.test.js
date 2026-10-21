@@ -31,7 +31,7 @@ test('forward and backward gaps wrap, handle coincident buses, and a single bus'
   assert.deepEqual(s.gaps(s.buses[0]), { ahead: 2, behind: 5 });
   assert.deepEqual(s.gaps(s.buses[2]), { ahead: 5, behind: 5 });
   s.buses[1].target = 1;
-  assert.deepEqual(s.gaps(s.buses[0]), { ahead: 0, behind: 0 });
+  assert.deepEqual(s.gaps(s.buses[0]), { ahead: 0, behind: 5 });
   const solo = new Simulation({ buses: 1, rate: 0 });
   assert.deepEqual(solo.gaps(solo.buses[0]), { ahead: 12, behind: 12 });
 });
@@ -203,9 +203,6 @@ test('normal service cancels all service restrictions but preserves a scheduled 
   s.action(0, 'express', 3);
   s.action(0, 'normal', 1);
   const b = s.buses[0];
-  assert.equal(b.express, 0);
-  assert.equal(b.pendingExpress, 0);
-  assert.equal(b.recoveryExpress, false);
   assert.equal(b.pendingHold, 100);
   s.action(0, 'pattern', pattern());
   s.action(0, 'normal', 1);
@@ -249,22 +246,19 @@ test('expiration during protected door movement completes that passenger safely'
   conserve(s);
 });
 
-test('until-recovered modes require both gaps, keep working if the follower is close, and exit on recovery', () => {
+test('until-recovered modes end on forward recovery even while the rear gap remains short', () => {
   for (const type of ['dropoff', 'pattern']) {
     const s = new Simulation({ buses: 3, rate: 0, travel: 10 });
-    const b = s.buses[0];
-    // At t10 the selected bus reaches1; others are held at1.5 and10.
-    Object.assign(s.buses[1], { phase: 'hold', target: 1.5, holdUntil: 1000, due: 1000 });
+    Object.assign(s.buses[1], { phase: 'hold', target: 2, holdUntil: 1000, due: 1000 });
     Object.assign(s.buses[2], { phase: 'hold', target: 10, holdUntil: 1000, due: 1000 });
-    const value =
-      type === 'pattern' ? pattern({ untilRecovered: true }) : dropoff({ untilRecovered: true });
-    s.action(0, type, value);
+    s.action(
+      0,
+      type,
+      type === 'pattern' ? pattern({ untilRecovered: true }) : dropoff({ untilRecovered: true }),
+    );
     s.advance(10);
-    assert(b.servicePlan, 'a follower only3 stops behind is below 0.9×the ideal4');
-    Object.assign(s.buses[1], { target: 6 });
-    Object.assign(s.buses[2], { target: 10 });
-    s.advance(10);
-    assert.equal(b.servicePlan, null);
+    assert.equal(s.buses[0].servicePlan, null);
+    assert(s.backwardGap(s.buses[0]) < 4 * 0.9);
   }
 });
 

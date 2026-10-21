@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation } from '../dist/engine.js';
 
-const ordered = (options = {}) => new Simulation({ semantics: 'ordered-v3', rate: 0, ...options });
+const ordered = (options = {}) => new Simulation({ rate: 0, ...options });
 function rider(sim, dest, stop, born = sim.time) {
   const p = { id: ++sim.created, born, queued: sim.time, wait: 0, dest, origin: stop ?? 0 };
   sim.births.push({ id: p.id, born, origin: p.origin, dest });
@@ -44,7 +44,7 @@ test('ordered gaps retain one wrap arc across all/partial ties, seam, one/two bu
       );
   }
 });
-test('genuine overtaking changes corrected immediate neighbor order', () => {
+test('genuine overtaking changes immediate neighbor order', () => {
   const sim = ordered({ buses: 3, travel: 10 });
   sim.action(1, 'hold', 200);
   const initial = sim.neighborSnapshot().order;
@@ -52,7 +52,7 @@ test('genuine overtaking changes corrected immediate neighbor order', () => {
   invariants(sim);
   assert.notDeepEqual(sim.neighborSnapshot().order, initial);
 });
-test('corrected recovery follows forward gap only and does not falsely recover convoy leader', () => {
+test('recovery follows forward gap only and does not falsely recover convoy leader', () => {
   const sim = ordered({ buses: 4, travel: 10 });
   for (const b of sim.buses)
     Object.assign(b, { phase: 'hold', target: 1, holdUntil: 1000, due: 1000 });
@@ -184,7 +184,7 @@ test('arrival cutoff is inclusive, cancels future events and preserves full dema
     );
   }
 });
-test('corrected runs remain deterministic across rendering schedules and serialization', () => {
+test('runs remain deterministic across rendering schedules and serialization', () => {
   for (const overtaking of [true, false]) {
     const a = ordered({
       arrival: 'poisson',
@@ -214,7 +214,6 @@ test('corrected runs remain deterministic across rendering schedules and seriali
 });
 test('invalid physical options and boarding instructions fail before mutation', () => {
   for (const config of [
-    { semantics: null },
     { stopOverhead: null },
     { overtaking: null },
     { cohortStart: null },
@@ -228,7 +227,7 @@ test('invalid physical options and boarding instructions fail before mutation', 
     { cohortStart: 2, arrivalCutoff: 1 },
   ])
     assert.throws(() => ordered(config));
-  assert.throws(() => new Simulation({ capacity: 10 }));
+  assert.equal(new Simulation({ capacity: 10 }).c.capacity, 10);
   const sim = ordered();
   const before = structuredClone(sim);
   assert.throws(() =>

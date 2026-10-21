@@ -1,8 +1,5 @@
-// Model revisions are explicit: old saved scenarios retain the original physics.
-export const MODEL_SEMANTICS = ['legacy-v2', 'ordered-v3'];
+// Physical assumptions shared by every simulation and scenario.
 export function normalizeModelOptions(config = {}) {
-  const semantics = config.semantics === undefined ? 'legacy-v2' : config.semantics;
-  if (!MODEL_SEMANTICS.includes(semantics)) throw Error('Unknown model semantics.');
   const overhead = config.stopOverhead === undefined ? 0 : config.stopOverhead;
   const stoppingDelay = config.stoppingDelay === undefined ? 0 : config.stoppingDelay;
   const startingDelay = config.startingDelay === undefined ? 0 : config.startingDelay;
@@ -30,15 +27,7 @@ export function normalizeModelOptions(config = {}) {
     (typeof config.provenance !== 'string' || config.provenance.length > 1000)
   )
     throw Error('Model provenance must be text of at most 1,000 characters.');
-  if (
-    semantics === 'legacy-v2' &&
-    (overhead || stoppingDelay || startingDelay || capacity !== null || !overtaking)
-  )
-    throw Error(
-      'Optional physical assumptions require the corrected model. Make a corrected copy first.',
-    );
   return {
-    semantics,
     stopOverhead: overhead,
     stoppingDelay,
     startingDelay,

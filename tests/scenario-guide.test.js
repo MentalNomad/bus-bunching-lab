@@ -59,7 +59,7 @@ test('the timed lesson demonstrates all three actions and the recovery lesson is
   assert.equal(timed.policy, undefined);
   assert.deepEqual(recovery.config, timed.config);
   assert.deepEqual(recovery.events, [timed.events[0]]);
-  assert.equal(recovery.policy, 'ordered-express');
+  assert.equal(recovery.policy, 'express');
   const run = new Experiment(recovery.config, 'guide-recovery', recovery);
   const checks = run.events.filter((event) => event.type === 'policy');
   assert.equal(checks.length, 71);
@@ -93,13 +93,7 @@ test('guide assets, downloads, and navigation work below a hosting subpath', asy
   assert.match(guide, /Open a new lab tab/);
 });
 
-test('every inline fragment is valid in its declared current or historical model', async () => {
-  const historical = JSON.parse(
-    await readFile(
-      new URL('../dist/examples/historical/announced-skip.json', import.meta.url),
-      'utf8',
-    ),
-  );
+test('every inline fragment is valid in its declared scenario language', async () => {
   const current = JSON.parse(
     await readFile(new URL('../dist/examples/announced-skip.json', import.meta.url), 'utf8'),
   );
@@ -109,9 +103,7 @@ test('every inline fragment is valid in its declared current or historical model
   )) {
     if (attributes.includes('data-example-file')) continue;
     const fragment = text.trim();
-    const data = structuredClone(
-      fragment.includes('-v1') || fragment.includes('two-gap-v2') ? historical : current,
-    );
+    const data = structuredClone(current);
     if (fragment.startsWith('"recovery_policy"')) {
       data.recovery_policy = JSON.parse(`{${fragment}}`).recovery_policy;
       data.interventions = [];

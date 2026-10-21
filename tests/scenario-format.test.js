@@ -38,7 +38,7 @@ test('custom policy schedule and definition survive copies and deterministic bac
   const e = new Experiment({}, 'holds'),
     data = JSON.parse(serializeScenario(e.definition, e.config));
   data.recovery_policy = {
-    rule: 'ordered-hold-v3',
+    rule: 'hold',
     start_seconds: 100,
     end_seconds: 220,
     check_every_seconds: 40,
@@ -79,7 +79,7 @@ test('invalid import fields, unknown rules, numbers, actions and versions are re
       }),
     (d) =>
       (d.recovery_policy = {
-        rule: 'hold-v1',
+        rule: 'hold',
         start_seconds: 0,
         end_seconds: 60,
         check_every_seconds: 0,

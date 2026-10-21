@@ -12,7 +12,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23182e2c'/%3E%3Cpath d='M9 9h14v14H9z' fill='%23c6ef72'/%3E%3Cpath d='M11 12h10v5H11z' fill='%23182e2c'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="style.css?v=20261015g" />
+    <link rel="stylesheet" href="style.css?v=20261021a" />
   </head>
   <body>
     <svg class="route-icon-definitions" aria-hidden="true" focusable="false">
@@ -167,10 +167,6 @@
               <p class="hint">
                 Slowing into a stop and regaining speed afterward. Skipped stops incur neither
                 penalty.
-                <span id="legacyManeuverHint" hidden
-                  >Historical lessons need a corrected copy to use these controls.
-                  <button type="button" id="enableManeuvers">Enable these controls</button></span
-                >
               </p>
             </div>
             <label
@@ -319,8 +315,8 @@
           <div class="intervention">
             <h3>Temporary express</h3>
             <p>
-              Skip stops after this service stop (or the next if moving). Historical runs transfer
-              affected riders. Corrected runs protect every accepted drop-off.
+              Skip stops after this service stop (or the next if moving). Every accepted drop-off
+              remains protected.
             </p>
             <label
               >Stops to skip<input
@@ -575,12 +571,12 @@
           <details>
             <summary>Model & metric definitions</summary>
             <p>
-              Defaults are unlimited capacity, overtaking allowed and no fixed overhead. Corrected
-              runs can change these assumptions in Route setup; the active revision is displayed
-              there. All buses start evenly spaced in motion on an empty route. Boarding and
-              debarking are sequential; arrivals continue during both. Fixed arrivals are
-              synchronized across stops; stochastic arrivals have independent exponential intervals.
-              Random rides are uniform integers from 1 to min(2 × configured length − 1, stops − 1).
+              Defaults are unlimited capacity, overtaking allowed and no fixed overhead. Change
+              these assumptions in Route setup. All buses start evenly spaced in motion on an empty
+              route. Boarding and debarking are sequential; arrivals continue during both. Fixed
+              arrivals are synchronized across stops; stochastic arrivals have independent
+              exponential intervals. Random rides are uniform integers from 1 to min(2 × configured
+              length − 1, stops − 1).
             </p>
             <p>
               Dwell is measured on departure and includes service and holds. Wait is sampled at each
@@ -623,6 +619,6 @@
       </div>
     </main>
     <footer>BUS BUNCHING LAB <span>Explore the gaps. Measure the passenger cost.</span></footer>
-    <script type="module" src="app.js?v=20261015g"></script>
+    <script type="module" src="app.js?v=20261021a"></script>
   </body>
 </html>

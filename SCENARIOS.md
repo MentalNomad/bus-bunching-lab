@@ -1,6 +1,6 @@
 # Built-in lesson review
 
-Reviewed 15 October 2026. Every current teaching preset explicitly uses `ordered-v3`, a **5-second stopping delay** and a **5-second starting delay**. These are lesson settings: omitted maneuver fields in older version 3 recipes still mean zero; version 1/2 recipes retain historical behavior. The old `balanced` and `corrected-variance` URLs resolve to current lessons without duplicate picker entries.
+Reviewed 21 October 2026. Every built-in teaching preset uses a **5-second stopping delay** and a **5-second starting delay**. All lessons and downloadable examples use one scenario language and one simulation model. The old `balanced` and `corrected-variance` URLs remain aliases for current lessons.
 
 Run `npm run audit:scenarios` to reproduce the table, or `node tools/audit-scenarios.mjs --json` for samples, decisions, accounting checks and matched passenger-birth fingerprints. Regression tests cover the advertised successes **and counterexamples**.
 
@@ -61,6 +61,6 @@ All compared cohorts finished. The passenger improvement persisted in these six 
 
 ## Guide and compatibility
 
-The [scenario guide](dist/scenario-guide.html) and current downloads use format 3 and the refreshed settings. It distinguishes manual recovery flags from event-control early restoration, true bypasses from protected served stops, current protected express from historical transfers, timed coordinated holds from automatic dispatch, and option defaults from preset overrides. Historical downloads remain under `dist/examples/historical/` for reproducing earlier results.
+The [scenario guide](dist/scenario-guide.html) and all downloads use the same language, without version or model selectors. It distinguishes manual recovery flags from event-control early restoration, true bypasses from protected served stops, timed coordinated holds from automatic dispatch, and option defaults from preset overrides. Additional teaching variants use zero maneuver penalties to isolate service effects; these are explicit settings in the same format.
 
-Built-in URLs identify the **current** lesson. Export complete scenario text to pin a particular version. Self-contained saved recipes remain unchanged when imported; older copies without embedded recipes use frozen historical definitions where applicable. Research packages outside this repository were not modified and are not evidence for this refreshed catalog.
+Built-in URLs identify the current lesson. Export complete scenario text to pin a particular recipe. Research packages outside this repository were not modified and are not evidence for this catalog.

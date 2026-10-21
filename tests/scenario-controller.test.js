@@ -2,17 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { Experiment, scenarios } from '../dist/experiment.js';
-import { historicalScenarios } from '../dist/historical-scenarios.js';
-import { serializeScenario, parseScenario, convertScenario } from '../dist/scenario-format.js';
+import { serializeScenario, parseScenario } from '../dist/scenario-format.js';
 import { summarizeCohort } from '../dist/measurements.js';
 
-test('corrected scenarios declare every model assumption, temporal option and finite horizon', () => {
+test('scenarios declare every model assumption, temporal option and finite horizon', () => {
   const e = new Experiment({}, 'temporal-recovery');
   const text = serializeScenario(e.definition, e.config);
   const data = JSON.parse(text);
-  assert.equal(data.version, 3);
-  assert.equal(data.model.semantics, 'ordered-v3');
-  assert.equal(data.recovery_policy.rule, 'temporal-cost-v3');
+  assert.equal(Object.hasOwn(data, 'version'), false);
+  assert.equal(data.recovery_policy.rule, 'passenger-cost');
   assert.equal(data.recovery_policy.options.decisionMode, 'events');
   assert.equal(data.observation.arrival_cutoff_seconds, 3600);
   const definition = parseScenario(text);
@@ -27,46 +25,14 @@ test('corrected scenarios declare every model assumption, temporal option and fi
   assert.deepEqual(Experiment.restore(e.export()).sim.controller, e.sim.controller);
 });
 
-test('historical scenarios retain their versions and conversion preserves the original', () => {
-  for (const id of ['holds', 'two-gap-holds', 'announced-express']) {
-    const historical = historicalScenarios.find((s) => s.id === id);
-    const e = new Experiment({}, id, historical);
-    const before = structuredClone(e.definition);
-    const data = JSON.parse(serializeScenario(e.definition, e.config));
-    assert.ok([1, 2].includes(data.version));
-    const d = convertScenario(e.definition, e.config);
-    assert.equal(d.config.semantics, 'ordered-v3');
-    assert.deepEqual(e.definition, before);
-    assert.equal(JSON.parse(serializeScenario(d, d.config)).version, 3);
-    assert.doesNotThrow(() => new Experiment(d.config, d.id, d));
-    assert.throws(() => new Experiment({ semantics: 'ordered-v3' }, id, historical), /semantics/);
-  }
-});
-
-test('a finite legacy comparison retains historical numerical rules and exports its horizon', () => {
-  const e = new Experiment(
-    { semantics: 'legacy-v2', arrivalCutoff: 1500, cohortStart: 1200 },
-    'delay',
-    historicalScenarios.find((s) => s.id === 'delay'),
-  );
-  const d = parseScenario(serializeScenario(e.definition, e.config));
-  assert.equal(d.config.semantics, 'legacy-v2');
-  assert.equal(d.config.arrivalCutoff, 1500);
-  assert.ok(e.drain(10000).complete);
-  assert.equal(
-    e.sim.stops.every((s) => s.next === Infinity),
-    true,
-  );
-});
-
 test('new commands at a viewed event boundary replay with manual priority and preserve demand', () => {
   const d = {
     id: 'boundary',
     name: 'Boundary',
     description: '',
-    config: { semantics: 'ordered-v3', board: 0, debark: 0 },
+    config: { board: 0, debark: 0 },
     events: [],
-    policy: 'temporal-v3',
+    policy: 'temporal',
     policyOptions: {},
     policySchedule: { start: 0, end: 1000 },
   };
@@ -83,12 +49,12 @@ test('new commands at a viewed event boundary replay with manual priority and pr
   assert.deepEqual(restored.sim.births, e.sim.births);
 });
 
-test('v3 strict validation rejects incompatible versions and malformed options before replacing a run', () => {
+test('strict validation rejects unknown fields and malformed options before replacing a run', () => {
   const e = new Experiment({}, 'temporal-recovery');
   const valid = JSON.parse(serializeScenario(e.definition, e.config));
   const mutations = [
     (d) => {
-      d.model.semantics = 'legacy-v2';
+      d.model.unsupported = true;
     },
     (d) => {
       d.model.stop_overhead_seconds = null;
@@ -112,7 +78,7 @@ test('v3 strict validation rejects incompatible versions and malformed options b
       d.recovery_policy.options.maxHold = 100000;
     },
     (d) => {
-      d.recovery_policy.rule = 'hold-v1';
+      d.recovery_policy.rule = 'hold';
     },
     (d) => {
       d.model.extra = true;
@@ -141,7 +107,7 @@ test('finite drain reports incomplete bounds and boarding recipes roundtrip with
     id: 'short-drain',
     name: 'Short drain',
     description: '',
-    config: { semantics: 'ordered-v3', arrivalCutoff: 60, cohortStart: 0 },
+    config: { arrivalCutoff: 60, cohortStart: 0 },
     events: [
       {
         t: 20,
@@ -166,7 +132,7 @@ test('finite drain reports incomplete bounds and boarding recipes roundtrip with
 });
 
 test('every new preset supports demand-preserving observation exports', () => {
-  for (const s of scenarios.filter((s) => s.config.semantics === 'ordered-v3')) {
+  for (const s of scenarios) {
     const e = new Experiment({}, s.id);
     e.advanceTo(1600);
     assert.ok(summarizeCohort(e.sim).diagnostics.conserved);
@@ -175,13 +141,17 @@ test('every new preset supports demand-preserving observation exports', () => {
   }
 });
 
-test('all corrected guide downloads are strict version 3 recipes with reproducible copies', async () => {
+test('all controller guide downloads are complete recipes with reproducible copies', async () => {
   const guide = await readFile(new URL('../dist/scenario-guide.html', import.meta.url), 'utf8');
-  for (const kind of ['holding', 'boarding', 'pattern', 'physics']) {
-    const file = `corrected-${kind}.json`;
+  for (const file of [
+    'passenger-cost-holds.json',
+    'bounded-boarding.json',
+    'protected-skips.json',
+    'physical-assumptions.json',
+  ]) {
     assert.ok(guide.includes(`examples/${file}`));
     const text = await readFile(new URL(`../dist/examples/${file}`, import.meta.url), 'utf8');
-    assert.equal(JSON.parse(text).version, 3);
+    assert.equal(Object.hasOwn(JSON.parse(text), 'version'), false);
     const definition = parseScenario(text);
     const e = new Experiment(definition.config, 'guide-corrected', definition);
     e.advanceTo(1700);
@@ -196,9 +166,9 @@ test('temporal windows use event bounds rather than a fictional 30-second pollin
     id: 'long-event-window',
     name: 'Long event window',
     description: '',
-    config: { semantics: 'ordered-v3', rate: 0 },
+    config: { rate: 0 },
     events: [],
-    policy: 'temporal-v3',
+    policy: 'temporal',
     policyOptions: {},
     policySchedule: { start: 0, end: 604800 },
   };

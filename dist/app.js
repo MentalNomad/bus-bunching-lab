@@ -1,13 +1,13 @@
-import { setupModelControls } from './model-ui.js?v=20261015g';
-import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261015g';
-import { Experiment, scenarios } from './experiment.js?v=20261015g';
-import { chartData, sharedScale } from './chart-data.js?v=20261015g';
-import { updateChartInspection, clearChartInspection } from './chart-inspection.js?v=20261015g';
-import { setupLayout } from './layout.js?v=20261015g';
-import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261015g';
-import { setupHelp } from './help.js?v=20261015g';
-import { scenarioFromSearch } from './scenario-links.js?v=20261015g';
-import { advanceMaxSpeed, advanceTimedSpeed } from './playback.js?v=20261015g';
+import { setupModelControls } from './model-ui.js?v=20261021a';
+import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261021a';
+import { Experiment, scenarios } from './experiment.js?v=20261021a';
+import { chartData, sharedScale } from './chart-data.js?v=20261021a';
+import { updateChartInspection, clearChartInspection } from './chart-inspection.js?v=20261021a';
+import { setupLayout } from './layout.js?v=20261021a';
+import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261021a';
+import { setupHelp } from './help.js?v=20261021a';
+import { scenarioFromSearch } from './scenario-links.js?v=20261021a';
+import { advanceMaxSpeed, advanceTimedSpeed } from './playback.js?v=20261021a';
 loadCustomPresets();
 let refreshHelp = () => {};
 let modelControls;
@@ -50,7 +50,7 @@ function initialize() {
   $('busCharts').innerHTML = sim.buses
     .map(
       (b) =>
-        `<article class="bus-chart"><h3 style="color:${colors[b.id]}">● Bus ${b.id + 1}</h3><h4>Time stopped per station</h4><p>Service + holding · seconds · sampled on departure</p><div class="chart-numbers" id="dwellNumbers${b.id}"></div><canvas id="dwell${b.id}" role="img" aria-label="Bus ${b.id + 1} dwell time graph"></canvas><h4>Cumulative queue wait per passenger at boarding</h4><p>Includes earlier transfer waits · seconds · sampled at each pickup</p><div class="chart-numbers" id="waitNumbers${b.id}"></div><canvas id="wait${b.id}" role="img" aria-label="Bus ${b.id + 1} passenger wait graph"></canvas><div class="chart-key">● Observation &nbsp; ━ Trailing average</div></article>`,
+        `<article class="bus-chart"><h3 style="color:${colors[b.id]}">● Bus ${b.id + 1}</h3><h4>Time stopped per station</h4><p>Service + holding · seconds · sampled on departure</p><div class="chart-numbers" id="dwellNumbers${b.id}"></div><canvas id="dwell${b.id}" role="img" aria-label="Bus ${b.id + 1} dwell time graph"></canvas><h4>Cumulative queue wait per passenger at boarding</h4><p>Initial queue wait · seconds · sampled at boarding</p><div class="chart-numbers" id="waitNumbers${b.id}"></div><canvas id="wait${b.id}" role="img" aria-label="Bus ${b.id + 1} passenger wait graph"></canvas><div class="chart-key">● Observation &nbsp; ━ Trailing average</div></article>`,
     )
     .join('');
   const heading = document.createElement('h2');
@@ -97,18 +97,17 @@ function syncForm() {
     if ($('config').elements[k]) $('config').elements[k].value = v ?? '';
   modelControls?.sync();
   for (const el of document.querySelectorAll('option[value="recovered"]'))
-    el.textContent =
-      sim.c.semantics === 'ordered-v3' ? 'When forward gap recovers' : 'When both gaps recover';
+    el.textContent = 'When forward gap recovers';
   $('scenario').value = experiment.scenarioId;
   $('scenario').dispatchEvent(new Event('change'));
-  const isTwoGap = ['two-gap', 'ordered-two-gap'].includes(experiment.definition.policy);
+  const isTwoGap = experiment.definition.policy === 'two-gap';
   const options = isTwoGap ? experiment.definition.policyOptions : null;
   $('policyStatus').textContent = isTwoGap
     ? `Active: ${options.ahead} gap ahead AND ${options.behind} gap behind → ${options.response.type === 'dropoff' ? 'drop-off-only' : options.response.type === 'pattern' ? 'announced pattern' : 'hold'}.`
     : experiment.definition.policy
-      ? experiment.definition.policy === 'temporal-v3'
-        ? 'Active: temporal-cost-v3. See the event controller and passenger evidence below.'
-        : 'Active: versioned preset rule. The spatial editor below creates a polling comparison.'
+      ? experiment.definition.policy === 'temporal'
+        ? 'Active: passenger-cost controller. See the event controller and passenger evidence below.'
+        : 'Active: spatial polling rule. The spatial editor below creates a polling comparison.'
       : 'Active: automatic dispatch is off.';
   $('policyAction').value = options?.response.type || 'none';
   if (options) {
@@ -299,7 +298,7 @@ $('gapPolicy').onsubmit = (event) => {
     delete definition.policyOptions;
     delete definition.policySchedule;
     if (type !== 'none') {
-      definition.policy = sim.c.semantics === 'ordered-v3' ? 'ordered-two-gap' : 'two-gap';
+      definition.policy = 'two-gap';
       definition.policyOptions = {
         ahead: $('gapAhead').value,
         behind: $('gapBehind').value,
@@ -383,8 +382,7 @@ function route() {
   }
   for (const b of sim.buses) {
     const [x, y] = xy(sim.position(b), r - 19 - (b.id % 3) * 5);
-    const held = b.phase !== 'travel' && Math.max(b.holdUntil, b.autoHoldUntil ?? 0) > sim.time,
-      express = b.express > 0 || b.pendingExpress > 0 || b.recoveryExpress;
+    const held = b.phase !== 'travel' && Math.max(b.holdUntil, b.autoHoldUntil ?? 0) > sim.time;
     const badge = held
       ? 'HOLD'
       : b.servicePlan
@@ -395,23 +393,15 @@ function route() {
             : b.servicePlan.phase !== 'active'
               ? 'PLAN'
               : `SKIP ${b.servicePlan.every}`
-        : express
-          ? b.recoveryExpress
-            ? 'ALT EX'
-            : 'EX ' + (b.express || b.pendingExpress)
-          : b.pendingHold
-            ? 'H NEXT'
-            : '';
+        : b.pendingHold
+          ? 'H NEXT'
+          : '';
     svg += `<g><title>${badge ? badge + ': ' : ''}Bus ${b.id + 1}: ${b.load.length} onboard, ${b.phase}</title><rect x="${x - 14}" y="${y - 12}" width="28" height="24" rx="7" fill="${colors[b.id]}" stroke="white" stroke-width="2"/><text x="${x}" y="${y + 1}" text-anchor="middle" dominant-baseline="middle" class="bus-label">${b.id + 1}</text>${badge ? `<rect x="${x - 28}" y="${y - 34}" width="56" height="18" rx="4" fill="${held ? '#915b12' : '#25497a'}"/><text x="${x}" y="${y - 22}" text-anchor="middle" fill="white" font-size="11" font-weight="700">${badge}</text>` : ''}</g>`;
   }
   $('route').innerHTML = svg;
-  $('planLegend').textContent =
-    selectedBus.servicePlan ||
-    selectedBus.express ||
-    selectedBus.pendingExpress ||
-    selectedBus.recoveryExpress
-      ? `Bus ${selectedBus.id + 1} next-encounter preview: ${selectedBus.servicePlan?.type === 'dropoff' ? 'drop-offs allowed; no new boarding.' : '× planned skip · gold ring protects an accepted drop-off. The plan may end earlier on recovery or its time cap.'}`
-      : 'Choose a bus in the dispatch desk to preview its announced pattern and protected drop-offs.';
+  $('planLegend').textContent = selectedBus.servicePlan
+    ? `Bus ${selectedBus.id + 1} next-encounter preview: ${selectedBus.servicePlan?.type === 'dropoff' ? 'drop-offs allowed; no new boarding.' : '× planned skip · gold ring protects an accepted drop-off. The plan may end earlier on recovery or its time cap.'}`
+    : 'Choose a bus in the dispatch desk to preview its announced pattern and protected drop-offs.';
   $('busList').innerHTML = sim.buses
     .map((b) => {
       let state =
@@ -426,15 +416,12 @@ function route() {
               : b.phase === 'hold'
                 ? `Holding · ${Math.ceil(Math.max(0, Math.max(b.holdUntil, b.autoHoldUntil ?? 0) - sim.time))}s left`
                 : `${b.service?.kind === 'off' ? 'Debarking' : 'Boarding'} · stop ${b.target + 1}`;
-      if (b.recoveryExpress) state += ' · alternating express until recovered';
       if (b.holdUntil > sim.time && b.phase !== 'travel' && b.phase !== 'hold')
         state += ` · hold ${Math.ceil(b.holdUntil - sim.time)}s left`;
-      if (b.express) state += ` · express ${b.express}`;
-      if (b.pendingExpress) state += ` · express ${b.pendingExpress} queued`;
       if (b.pendingHold) state += ` · hold ${b.pendingHold}s queued`;
       if (b.servicePlan) state += ' · ' + sim.serviceStatus(b);
       const gaps = sim.gaps(b);
-      return `<div class="bus-card"><span class="bus-dot" style="background:${colors[b.id]}"></span><div><strong>Bus ${b.id + 1} <span style="font-weight:400">· ${b.load.length + (b.service?.kind === 'on' ? 1 : 0)} riding</span></strong>${state}<small class="bus-gaps" tabindex="0" data-help="Spatial distance in stop intervals. Corrected runs use immediate ordered neighbors, retaining a full circular gap at tied positions. Historical runs preserve the old nearest-distance calculation. Target is stops divided by buses. Speeding this bus closes its forward gap and opens its rear gap; holding does the reverse.">Ahead ${gaps.ahead.toFixed(2)} · behind ${gaps.behind.toFixed(2)} · target ${(sim.c.stops / sim.c.buses).toFixed(2)}</small></div></div>`;
+      return `<div class="bus-card"><span class="bus-dot" style="background:${colors[b.id]}"></span><div><strong>Bus ${b.id + 1} <span style="font-weight:400">· ${b.load.length + (b.service?.kind === 'on' ? 1 : 0)} riding</span></strong>${state}<small class="bus-gaps" tabindex="0" data-help="Spatial distance in stop intervals. Immediate neighbors retain a full circular gap at tied positions. Target is stops divided by buses. Speeding this bus closes its forward gap and opens its rear gap; holding does the reverse.">Ahead ${gaps.ahead.toFixed(2)} · behind ${gaps.behind.toFixed(2)} · target ${(sim.c.stops / sim.c.buses).toFixed(2)}</small></div></div>`;
     })
     .join('');
 }
@@ -617,7 +604,6 @@ function render() {
     ['Trips completed', s.completed, `${s.created} passengers arrived`],
     ['Mean queue wait', duration(s.meanWait), 'Completed passengers'],
     ['Mean system time', duration(s.meanSystem), 'Completed only · includes initial wait'],
-    ['Forced transfers', s.transfers, 'Express service cost'],
     ['Oldest current queue wait', duration(s.oldestWait), 'Longest current queue episode'],
     ['Mean current queue wait', duration(s.meanCurrentWait), 'Everyone waiting right now'],
     [

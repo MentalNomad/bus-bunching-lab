@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Experiment } from '../dist/experiment.js';
-import { historicalScenarios } from '../dist/historical-scenarios.js';
+import { Experiment, scenarios } from '../dist/experiment.js';
 import { parseScenario, serializeScenario } from '../dist/scenario-format.js';
 
 test('the last allowed intervention remains shareable and one more leaves the run unchanged', () => {
@@ -52,29 +51,18 @@ test('restored timeline bounds cannot exceed the supported run duration', () => 
     assert.throws(() => Experiment.restore({ ...copy, furthest }), /copy|timeline/i);
 });
 
-test('historical manual dispatch operates without replaying its history', () => {
-  const e = new Experiment(
-    {},
-    'variance',
-    historicalScenarios.find((s) => s.id === 'variance'),
-  );
+test('manual dispatch rebuilds the current boundary without changing seeded demand or the previous snapshot', () => {
+  const e = new Experiment({}, 'variance');
   e.advanceTo(3600);
-  const sim = e.sim,
-    prototype = Object.getPrototypeOf(sim),
-    advance = prototype.advance;
-  prototype.advance = function (seconds) {
-    if (seconds > 0) throw Error('Dispatch must not replay');
-    return advance.call(this, seconds);
-  };
-  try {
-    e.action(0, 'hold', 30);
-  } finally {
-    prototype.advance = advance;
-  }
-  assert.equal(e.sim, sim);
+  const prior = e.sim,
+    before = structuredClone(prior),
+    births = structuredClone(prior.births);
+  e.action(0, 'hold', 30);
+  assert.notEqual(e.sim, prior);
+  assert.deepEqual(structuredClone(prior), before);
+  assert.deepEqual(e.sim.births, births);
   assert.equal(e.commands.length, 1);
-  const copy = Experiment.restore(e.export());
-  assert.deepEqual(structuredClone(copy.sim), structuredClone(sim));
+  assert.deepEqual(Experiment.restore(e.export()).sim.summary(), e.sim.summary());
 });
 
 test('manual dispatch at an automatic recovery check replays and shares the same outcome', () => {
@@ -89,7 +77,10 @@ test('manual dispatch at an automatic recovery check replays and shares the same
   const e = new Experiment({}, 'custom-policy-tie', definition);
   e.advanceTo(40);
   // Bus 1 is boarding at the check; slowed Bus 2 is close enough to trigger a hold.
-  assert(e.sim.buses[0].holdUntil > 41, 'the automatic check must apply a material hold');
+  assert(
+    Math.max(e.sim.buses[0].holdUntil, e.sim.buses[0].autoHoldUntil) > 41,
+    'the automatic check must apply a material hold',
+  );
   e.action(0, 'hold', 1);
   const expected = structuredClone(e.sim);
   assert.deepEqual(structuredClone(Experiment.restore(e.export()).sim), expected);

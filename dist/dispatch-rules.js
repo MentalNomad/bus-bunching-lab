@@ -1,4 +1,4 @@
-import { normalizeServiceAction } from './service-plan.js?v=20261015g';
+import { normalizeServiceAction } from './service-plan.js?v=20261021a';
 
 function exactKeys(value, allowed, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value))

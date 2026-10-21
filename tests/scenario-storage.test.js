@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setupScenarioLibrary } from '../dist/scenario-ui.js';
-import { Experiment, scenarios } from '../dist/experiment.js?v=20261015g';
-import { serializeScenario } from '../dist/scenario-format.js?v=20261015g';
+import { Experiment, scenarios } from '../dist/experiment.js?v=20261021a';
+import { serializeScenario } from '../dist/scenario-format.js?v=20261021a';
 
 // Exercise the public save button with only the DOM methods used by the library.
 // Browser windows have separate scenario arrays but share the same local storage.
@@ -99,7 +99,7 @@ test('saving from a preopened window retains a preset saved by another window', 
   // Restore the unchanged in-memory inventory held by a second preopened window.
   scenarios.splice(0, scenarios.length, ...originalScenarios);
   await save(secondWindow, 'Window B lesson');
-  const names = JSON.parse(stored.get('bus-lab-custom-scenarios-v1')).map(
+  const names = JSON.parse(stored.get('bus-lab-custom-scenarios')).map(
     (item) => JSON.parse(item.text).name,
   );
   assert.deepEqual(names.sort(), ['Window A lesson', 'Window B lesson']);

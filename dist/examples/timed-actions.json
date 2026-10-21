@@ -1,7 +1,6 @@
 {
   "format": "Bus Bunching Lab scenario",
-  "version": 3,
-  "notes": "Units: seconds from time zero; bus numbers start at 1. Model semantics is explicit. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. ordered-v3 until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. Missing maneuver fields in older v3 recipes mean zero. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "notes": "Units: seconds from time zero; bus numbers start at 1. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
   "name": "Three timed interventions · protected drop-offs",
   "description": "12 stops, 4 buses, fixed arrivals and four-stop rides, with 5-second stopping and starting delays. Hold Bus 1 for 60 seconds at minute 20, double Bus 2 travel at minute 30, then send Bus 1 past two locations at minute 40. Accepted drop-offs override skips; no forced transfers. This is an action-writing demonstration, not a recovery policy.",
   "setup": {
@@ -17,7 +16,6 @@
     "random_seed": 42
   },
   "model": {
-    "semantics": "ordered-v3",
     "stop_overhead_seconds": 0,
     "stopping_delay_seconds": 5,
     "starting_delay_seconds": 5,

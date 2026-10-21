@@ -6,7 +6,6 @@ import { predictEligibleService } from '../dist/controller.js';
 import { parseScenario, serializeScenario } from '../dist/scenario-format.js';
 
 const config = {
-  semantics: 'ordered-v3',
   stops: 6,
   buses: 1,
   rate: 0,
@@ -127,14 +126,14 @@ test('maneuvers preserve demand, accounting, partitions, scenario roundtrips, re
 
   delete recipe.model.stopping_delay_seconds;
   delete recipe.model.starting_delay_seconds;
-  assert.equal(parseScenario(JSON.stringify(recipe)).config.stoppingDelay, 0);
+  assert.throws(() => parseScenario(JSON.stringify(recipe)), /Missing model field/);
 });
 
-test('maneuver inputs reject malformed values and preserve historical semantics', () => {
+test('maneuver inputs reject malformed values and accept valid physical settings', () => {
   for (const key of ['startingDelay', 'stoppingDelay']) {
     for (const value of [null, -1, 121, Infinity, '3'])
       assert.throws(() => new Simulation({ ...config, [key]: value }));
-    assert.throws(() => new Simulation({ [key]: 3 }), /corrected model/);
+    assert.equal(new Simulation({ [key]: 3 }).c[key], 3);
   }
 });
 

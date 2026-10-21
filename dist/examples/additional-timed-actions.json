@@ -1,0 +1,52 @@
+{
+  "format": "Bus Bunching Lab scenario",
+  "notes": "Units: seconds from time zero; bus numbers start at 1. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "name": "Baseline and three timed actions",
+  "description": "Teaching variant with zero stopping and starting penalties; accepted drop-offs are protected. Begin with evenly spaced buses and fixed demand. At minute 20, hold Bus 1 for 60 seconds. At minute 30, double travel time on Bus 2's current or next segment. At minute 40, send Bus 1 past two stops after its current or next service stop. Compare the gaps and passenger costs before and after each action.",
+  "setup": {
+    "stops": 12,
+    "buses": 4,
+    "travel_seconds_per_segment": 40,
+    "passengers_per_stop_per_minute": 3,
+    "arrival_pattern": "fixed",
+    "boarding_seconds_per_passenger": 2,
+    "debarking_seconds_per_passenger": 1,
+    "ride_length_stops": 4,
+    "ride_pattern": "fixed",
+    "random_seed": 42
+  },
+  "model": {
+    "stop_overhead_seconds": 0,
+    "stopping_delay_seconds": 0,
+    "starting_delay_seconds": 0,
+    "bus_capacity": null,
+    "allow_overtaking": true,
+    "calibration_notes": "Illustrative teaching model; not empirically calibrated."
+  },
+  "observation": {
+    "cohort_start_seconds": 0,
+    "arrival_cutoff_seconds": null,
+    "drain_max_seconds": 86400
+  },
+  "interventions": [
+    {
+      "at_seconds": 1200,
+      "bus": 1,
+      "action": "hold",
+      "seconds": 60
+    },
+    {
+      "at_seconds": 1800,
+      "bus": 2,
+      "action": "slow",
+      "multiplier": 2
+    },
+    {
+      "at_seconds": 2400,
+      "bus": 1,
+      "action": "express",
+      "stops": 2
+    }
+  ],
+  "recovery_policy": null
+}

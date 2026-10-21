@@ -28,14 +28,25 @@ test('two-gap dispatch requires both directions and never holds twice on one vis
     bus = e.sim.buses[0];
   assert.deepEqual(e.sim.gaps(bus), { ahead: 1, behind: 4 });
   e.dispatch('two-gap');
-  assert.equal(bus.holdUntil, 30);
-  assert.equal(e.sim.buses[1].holdUntil, 0, 'a small gap alone must not trigger');
+  assert.equal(bus.autoHoldUntil, 30);
+  assert.equal(e.sim.buses[1].autoHoldUntil, 0, 'a small gap alone must not trigger');
   e.sim.time = 31;
   e.dispatch('two-gap');
-  assert.equal(bus.holdUntil, 30, 'elapsed hold does not allow another action at the same visit');
+  assert.equal(
+    bus.autoHoldUntil,
+    30,
+    'elapsed hold does not allow another action at the same visit',
+  );
   bus.stopStart = 31;
   e.dispatch('two-gap');
-  assert.equal(bus.holdUntil, 61, 'a new visit can qualify again');
+  bus.visits++;
+  e.dispatch('two-gap');
+  assert.equal(bus.autoHoldUntil, 30, 'a new visit still respects the two-visit cooldown');
+  bus.visits += 2;
+  bus.stopStart = 32;
+  e.sim.time = 32;
+  e.dispatch('two-gap');
+  assert.equal(bus.autoHoldUntil, 62, 'a later eligible visit can qualify after cooldown');
 });
 
 test('strict thresholds exclude equality and any ignores only its selected direction', () => {
@@ -47,7 +58,7 @@ test('strict thresholds exclude equality and any ignores only its selected direc
   assert.equal(bus.holdUntil, 0, 'ahead equals the small threshold');
   e.sim.buses[1].target = 2;
   e.dispatch('two-gap');
-  assert.equal(bus.holdUntil, 30);
+  assert.equal(bus.autoHoldUntil, 30);
 });
 
 test('one snapshot can restrict several matching buses but reserves a full-service bus', () => {
@@ -55,12 +66,12 @@ test('one snapshot can restrict several matching buses but reserves a full-servi
     type: 'dropoff',
     value: { stops: 3, untilRecovered: false, maxSeconds: 600 },
   });
-  e.definition.policyOptions.behind = 'small';
-  for (const b of e.sim.buses) b.target = 0;
+  e.definition.policyOptions.behind = 'any';
+  for (const b of e.sim.buses) b.target = b.id;
   e.dispatch('two-gap');
   assert.equal(e.sim.buses.filter((b) => b.servicePlan).length, 3);
   assert.equal(e.sim.buses.filter((b) => !b.servicePlan).length, 1);
-  e.sim.buses[3].target = 1;
+  e.sim.buses[3].target = 10;
   e.dispatch('two-gap');
   assert.equal(e.sim.buses.filter((b) => !b.servicePlan).length, 1);
 });
@@ -75,8 +86,6 @@ test('automatic restrictions never remove the only bus from full service', () =>
   e.definition.policyOptions.large = 1;
   e.sim.buses.splice(1);
   e.sim.c.buses = 1;
-  // Force a matching condition to exercise reservation, not merely the gap test.
-  e.sim.gaps = () => ({ ahead: 20, behind: 12 });
   e.dispatch('two-gap');
   assert.equal(e.sim.buses[0].servicePlan, null);
 });
@@ -111,10 +120,10 @@ test('recorded service instructions are copied rather than retaining editable ca
 });
 
 function orderedExperiment(policy, positions) {
-  const experiment = new Experiment({ semantics: 'ordered-v3', rate: 0 }, 'ordered-test', {
+  const experiment = new Experiment({ rate: 0 }, 'ordered-test', {
     name: 'Ordered hold test',
     description: '',
-    config: { semantics: 'ordered-v3' },
+    config: {},
     events: [],
     policy,
     policyOptions: {
@@ -141,7 +150,7 @@ function orderedExperiment(policy, positions) {
 }
 
 test('corrected spatial polling keeps each partial coincident group front free on later visits', () => {
-  for (const policy of ['ordered-hold', 'ordered-two-gap'])
+  for (const policy of ['hold', 'two-gap'])
     for (const positions of [
       [0, 0, 0, 1],
       [11, 0, 11, 11],
@@ -164,7 +173,7 @@ test('corrected spatial polling keeps each partial coincident group front free o
 });
 
 test('corrected spatial polling releases only the automatic hold of a newly coincident front', () => {
-  for (const policy of ['ordered-hold', 'ordered-two-gap']) {
+  for (const policy of ['hold', 'two-gap']) {
     const e = orderedExperiment(policy, [5, 9, 0, 1]);
     const bus = e.sim.buses[2];
     e.dispatch(policy);

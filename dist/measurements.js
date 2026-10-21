@@ -210,8 +210,6 @@ export function measurementExport(sim, options = {}) {
     );
   return {
     format: 'BusBunchingLabObservation',
-    version: 3,
-    modelSemantics: sim.c.semantics ?? 'legacy-v2',
     config: scalars(sim.c),
     assumptions: {
       stopOverhead: sim.c.stopOverhead ?? 0,
@@ -222,7 +220,7 @@ export function measurementExport(sim, options = {}) {
     summary: summarizeCohort(sim, options),
     controller: sim.controller
       ? {
-          rule: 'temporal-cost-v3',
+          rule: 'passenger-cost',
           options: scalars(sim.controller.options),
           schedule: scalars(sim.controller.schedule),
           metrics: scalars(sim.controller.metrics),
@@ -245,7 +243,6 @@ export function measurementCSV(sim, options = {}) {
   const { summary, passengers, modelSemantics, config, assumptions, controller } =
     measurementExport(sim, options);
   const metadata = [
-    ['modelSemantics', modelSemantics],
     ...Object.entries(config).map(([key, value]) => [`config.${key}`, value]),
     ...Object.entries(assumptions).map(([key, value]) => [`assumptions.${key}`, value]),
     ['controllerRule', controller?.rule ?? 'none'],

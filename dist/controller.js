@@ -11,7 +11,6 @@ export function configureTemporalController(sim, options = {}, schedule = {}) {
     throw Error('Temporal control requires a start/end window of 0–604,800 seconds.');
   // Plain data only: replay, seek and structuredClone retain every budget/history.
   sim.controller = {
-    version: 3,
     options: normalized,
     schedule: { start, end },
     nextPoll: normalized.decisionMode === 'polling' ? start : Infinity,
@@ -109,8 +108,6 @@ function servesDestination(sim, bus, origin, dest, eta = 0) {
       if (patternSkips(plan, location + ride)) return false;
     }
   }
-  // Legacy express can force transfers: never advertise it as credible coverage.
-  if (bus.express || bus.pendingExpress || bus.recoveryExpress) return false;
   return true;
 }
 
@@ -698,14 +695,7 @@ export function evaluateControllerBatch(sim, events = []) {
       continue;
     }
     if (!inWindow || s.lastDecisionVisit === key) continue;
-    if (
-      bus.servicePlan ||
-      bus.express ||
-      bus.pendingExpress ||
-      bus.recoveryExpress ||
-      bus.pendingHold ||
-      bus.holdUntil > sim.time
-    ) {
+    if (bus.servicePlan || bus.pendingHold || bus.holdUntil > sim.time) {
       decision(sim, bus, 'suppressed', 'existing instruction or manual hold', context);
       continue;
     }
@@ -852,7 +842,7 @@ export function controllerSummary(sim) {
   if (!sim.controller) return null;
   return {
     ...sim.controller.metrics,
-    mode: 'temporal-cost-v3',
+    mode: 'passenger-cost',
     decisionMode: sim.controller.options.decisionMode,
     targetSeconds: sim.controller.options.targetSeconds,
     recordedDecisions: sim.controller.decisions.length,

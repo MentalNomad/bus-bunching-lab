@@ -8,29 +8,29 @@ import {
 } from '../dist/scenario-format.js';
 import { normalizeGapPolicy } from '../dist/dispatch-rules.js';
 import { Experiment } from '../dist/experiment.js';
-import { historicalScenarios as scenarios } from '../dist/historical-scenarios.js';
+import { scenarios } from '../dist/scenarios.js';
 
 const files = ['two-gap-holds', 'drop-off-only', 'announced-skip'];
 const examples = await Promise.all(
   files.map(async (name) =>
     JSON.parse(
-      await readFile(new URL(`../dist/examples/historical/${name}.json`, import.meta.url), 'utf8'),
+      await readFile(new URL(`../dist/examples/additional-${name}.json`, import.meta.url), 'utf8'),
     ),
   ),
 );
 const copy = (value) => structuredClone(value);
 const parse = (value) => parseScenario(JSON.stringify(value));
 
-test('all three v2 guide downloads roundtrip and replay deterministically, including rewind and copies', () => {
+test('additional service examples roundtrip and replay deterministically, including rewind and copies', () => {
   for (const data of examples) {
     const definition = parse(data);
     const exported = serializeScenario(definition, definition.config);
-    assert.equal(JSON.parse(exported).version, 2);
+    assert.equal(Object.hasOwn(JSON.parse(exported), 'version'), false);
     const imported = parseScenario(exported);
     assert.deepEqual(imported, definition);
-    const first = new Experiment({}, 'v2-guide', definition);
+    const first = new Experiment({}, 'service-guide', definition);
     first.advanceTo(3600);
-    const replay = new Experiment({}, 'v2-replay', imported);
+    const replay = new Experiment({}, 'service-replay', imported);
     replay.advanceTo(3600);
     assert.deepEqual(first.sim.summary(), replay.sim.summary(), data.name);
     assert.deepEqual(first.sim.completedPassengers, replay.sim.completedPassengers, data.name);
@@ -38,7 +38,7 @@ test('all three v2 guide downloads roundtrip and replay deterministically, inclu
     assert.equal(first.sim.transfers, 0, `${data.name}: new modes preserve accepted drop-offs`);
     if (definition.policy === 'two-gap')
       assert(
-        first.sim.log.some((entry) => entry.message.startsWith('Two-gap rule:')),
+        first.sim.log.some((entry) => entry.message.startsWith('Ordered polling:')),
         `${data.name}: demonstrate an actual activation`,
       );
     if (
@@ -59,38 +59,6 @@ test('all three v2 guide downloads roundtrip and replay deterministically, inclu
     );
     assert(!first.sim.log.some((entry) => entry.message.startsWith('Skipped ')));
   }
-});
-
-test('v2 downloads use the same recipe as the three archived historical demonstrations', () => {
-  const ids = ['two-gap-holds', 'dropoff', 'announced-express'];
-  examples.forEach((example, index) => {
-    const imported = parse(example);
-    const preset = scenarios.find((scenario) => scenario.id === ids[index]);
-    assert(preset, `${ids[index]} must be loadable from the library`);
-    const builtIn = new Experiment({}, preset.id, preset);
-    assert.deepEqual(imported.config, builtIn.config);
-    assert.deepEqual(imported.events, preset.events);
-    assert.deepEqual(imported.policy, preset.policy);
-    assert.deepEqual(imported.policyOptions, preset.policyOptions);
-    assert.deepEqual(imported.policySchedule, preset.policySchedule);
-  });
-});
-
-test('legacy recipes remain version 1, v2 can contain legacy actions, and only new features require v2', () => {
-  const original = scenarios.find((scenario) => scenario.id === 'delay');
-  const legacy = JSON.parse(
-    serializeScenario(original, new Experiment({}, original.id, original).config),
-  );
-  assert.equal(legacy.version, 1);
-  const expected = parse(legacy);
-  legacy.version = 2;
-  assert.deepEqual(parse(legacy), expected);
-  const newAction = copy(examples[2]);
-  newAction.version = 1;
-  assert.throws(() => parse(newAction), /unknown action/);
-  const newPolicy = copy(examples[0]);
-  newPolicy.version = 1;
-  assert.throws(() => parse(newPolicy));
 });
 
 test('new actions preserve stable equal-time order, ongoing spans and explicit cancellation', () => {

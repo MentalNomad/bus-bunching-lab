@@ -152,7 +152,7 @@ test('exports retain original birth clocks and explicitly identify incomplete re
   const s = ledger();
   const before = structuredClone(s);
   const x = measurementExport(s);
-  assert.equal(x.version, 3);
+  assert.equal(x.format, 'BusBunchingLabObservation');
   assert.equal(x.passengers[1].born, 5);
   assert.equal(x.passengers[1].completionSeconds, null);
   const csv = measurementCSV(s);
@@ -165,7 +165,6 @@ test('exports retain original birth clocks and explicitly identify incomplete re
 test('CSV and JSON exports describe assumptions, seed and control including safely escaped text', () => {
   const s = ledger();
   Object.assign(s.c, {
-    semantics: 'ordered-v3',
     stopOverhead: 10,
     capacity: 40,
     overtaking: false,
@@ -190,11 +189,10 @@ test('CSV and JSON exports describe assumptions, seed and control including safe
   assert.equal(data.controller.decisions[0].t, 15);
   assert.notEqual(data.controller.decisions, s.controller.decisions);
   const csv = measurementCSV(s);
-  assert.match(csv, /modelSemantics,ordered-v3\r\n/);
   assert.match(csv, /config.seed,817\r\n/);
   assert.match(csv, /config.capacity,40\r\n/);
   assert.match(csv, /config.overtaking,false\r\n/);
-  assert.match(csv, /controllerRule,temporal-cost-v3\r\n/);
+  assert.match(csv, /controllerRule,passenger-cost\r\n/);
   assert.match(csv, /controller.options.maxDenials,2\r\n/);
   assert.match(csv, /controller.schedule.end,20\r\n/);
   assert.match(csv, /controller.metrics.realizedHoldSeconds,5\r\n/);
@@ -206,7 +204,6 @@ test('CSV and JSON exports describe assumptions, seed and control including safe
 test('real finite-arrival drain retains original demand and agrees with all independent integrals', async () => {
   const { Simulation } = await import('../dist/engine.js');
   const s = new Simulation({
-    semantics: 'ordered-v3',
     stops: 6,
     buses: 2,
     travel: 10,

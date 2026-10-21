@@ -12,7 +12,7 @@ import {
 } from '../dist/controller.js';
 
 function stopped(positions = [1, 1, 1, 1], options = {}, config = {}) {
-  const sim = new Simulation({ semantics: 'ordered-v3', rate: 3, ...config });
+  const sim = new Simulation({ rate: 3, ...config });
   sim.time = 100;
   sim.stops.forEach((s) => {
     s.next = Infinity;
@@ -515,7 +515,6 @@ test('prediction includes sequential overhead and known alighting without chargi
 
 test('a follower prediction includes the origin overhead before its first boarding opportunity', () => {
   const sim = new Simulation({
-    semantics: 'ordered-v3',
     buses: 1,
     rate: 0,
     travel: 40,
@@ -536,7 +535,7 @@ test('a follower prediction includes the origin overhead before its first boardi
 });
 
 test('onward follower service includes a queued first-stop hold and next-segment slowdown', () => {
-  const held = new Simulation({ semantics: 'ordered-v3', buses: 1, rate: 0, travel: 40 });
+  const held = new Simulation({ buses: 1, rate: 0, travel: 40 });
   held.action(0, 'hold', 300);
   held.stops[2].queue.push(passenger(1, 3));
   const heldPrediction = predictEligibleService(held, held.buses[0], 2, 3);
@@ -544,7 +543,7 @@ test('onward follower service includes a queued first-stop hold and next-segment
   held.advance(380);
   assert.equal(held.buses[0].service?.start, heldPrediction.serviceAt);
 
-  const slow = new Simulation({ semantics: 'ordered-v3', buses: 1, rate: 0, travel: 40 });
+  const slow = new Simulation({ buses: 1, rate: 0, travel: 40 });
   slow.action(0, 'hold', 1);
   slow.advance(40);
   slow.action(0, 'slow', 4);
@@ -556,7 +555,7 @@ test('onward follower service includes a queued first-stop hold and next-segment
 });
 
 test('no-overtaking uses a conservative normal-service fallback instead of an unsafe free-travel estimate', () => {
-  const sim = new Simulation({ semantics: 'ordered-v3', rate: 0, overtaking: false });
+  const sim = new Simulation({ rate: 0, overtaking: false });
   sim.action(0, 'hold', 1000);
   assert.equal(predictEligibleService(sim, sim.buses[3], 2, 3), null);
   sim.configureController({}, { start: 0, end: 1500 });
@@ -569,7 +568,7 @@ test('no-overtaking uses a conservative normal-service fallback instead of an un
 
 test('following capacity accounts for allowance expiry before arrival and during boarding', () => {
   for (const maxSeconds of [1, 41]) {
-    const sim = new Simulation({ semantics: 'ordered-v3', buses: 1, rate: 0, capacity: 3 });
+    const sim = new Simulation({ buses: 1, rate: 0, capacity: 3 });
     sim.action(0, 'boarding', { passengers: 1, stops: 3, untilRecovered: false, maxSeconds });
     sim.stops[1].queue.push(passenger(1, 5), passenger(2, 5), passenger(3, 5));
     assert.equal(predictEligibleService(sim, sim.buses[0], 2, 3), null);
@@ -579,7 +578,7 @@ test('following capacity accounts for allowance expiry before arrival and during
 });
 
 test('following capacity releases a bounded boarding allowance at later stop locations', () => {
-  const sim = new Simulation({ semantics: 'ordered-v3', buses: 1, rate: 0, capacity: 3 });
+  const sim = new Simulation({ buses: 1, rate: 0, capacity: 3 });
   sim.action(0, 'boarding', { passengers: 1, stops: 1, untilRecovered: false, maxSeconds: 600 });
   sim.stops[2].queue.push(passenger(1, 5), passenger(2, 5), passenger(3, 5));
   assert.equal(predictEligibleService(sim, sim.buses[0], 3, 4), null);
@@ -679,7 +678,6 @@ test('unavoidable capacity or manual denial breaches identify their cause', () =
 test('event control observes zero-dwell stops and replay agrees across advance partitions', () => {
   const create = () => {
     const sim = new Simulation({
-      semantics: 'ordered-v3',
       board: 0,
       debark: 0,
       arrival: 'poisson',

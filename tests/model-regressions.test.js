@@ -2,58 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation } from '../dist/engine.js';
 
-test('replacing an express plan cancels queued transfers but completes active unloading', () => {
-  const s = new Simulation({
-    stops: 6,
-    buses: 1,
-    rate: 60,
-    travel: 10,
-    board: 1,
-    debark: 2,
-    ride: 3,
-  });
-  s.advance(20);
-  s.action(0, 'express', 3);
-  s.advance(1);
-  const active = s.buses[0].service.p;
-  s.action(0, 'express', 1);
-  s.advance(2);
-  assert.equal(s.transfers, 1);
-  assert(s.stops[1].queue.includes(active));
-  s.advance(22);
-  assert.equal(s.transfers, 1);
-  assert(s.buses[0].load.some((p) => p.dest === 4));
-});
-
-test('replacing an express plan with a larger plan also replaces its transfer queue', () => {
-  const s = new Simulation({
-    stops: 6,
-    buses: 1,
-    rate: 0,
-    travel: 10,
-    board: 1,
-    debark: 2,
-    ride: 3,
-  });
-  const passengers = [2, 3, 4, 5].map((dest, i) => ({
-    id: i + 1,
-    born: 0,
-    queued: 0,
-    wait: 0,
-    dest,
-  }));
-  s.created = passengers.length;
-  s.buses[0].load.push(...passengers);
-  s.action(0, 'hold', 30);
-  s.action(0, 'express', 1);
-  s.advance(11);
-  s.action(0, 'express', 3);
-  s.advance(6);
-  assert.equal(s.transfers, 3);
-  assert.deepEqual(s.buses[0].load, [passengers[3]]);
-  assert.deepEqual(s.stops[1].queue, passengers.slice(0, 3));
-});
-
 test('composed slowdowns reject excessive remaining travel before changing the bus or log', () => {
   const s = new Simulation({ rate: 0, travel: 10 });
   for (let i = 0; i < 4; i++) s.action(0, 'slow', 10);

@@ -1,19 +1,18 @@
-import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261015g';
+import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261021a';
 
 import {
   parseScenario,
   serializeScenario,
   checkInterventionCount,
-} from './scenario-format.js?v=20261015g';
+} from './scenario-format.js?v=20261021a';
 
-import { normalizeControllerOptions } from './controller-options.js?v=20261015g';
+import { normalizeControllerOptions } from './controller-options.js?v=20261021a';
 
-import { summarizeCohort } from './measurements.js?v=20261015g';
+import { summarizeCohort } from './measurements.js?v=20261021a';
 
-import { normalizeGapPolicy } from './dispatch-rules.js?v=20261015g';
+import { normalizeGapPolicy } from './dispatch-rules.js?v=20261021a';
 
-import { scenarios } from './scenarios.js?v=20261015g';
-import { historicalScenarios } from './historical-scenarios.js?v=20261015g';
+import { scenarios } from './scenarios.js?v=20261021a';
 export { scenarios };
 
 // Replay from the seed and timestamped commands restores passengers, random state,
@@ -32,41 +31,20 @@ export class Experiment {
 
     this.config = new Simulation({ ...scenario.config, ...config }).c;
 
-    const ordered = this.config.semantics === 'ordered-v3';
-
-    if (
-      ordered &&
-      scenario.config.semantics !== 'ordered-v3' &&
-      scenario.events.some((e) => ['dropoff', 'pattern', 'normal'].includes(e.type))
-    )
-      throw Error('Service-plan model semantics must be converted explicitly.');
-    const orderedPolicies = [
-      'ordered-hold',
-      'ordered-express',
-      'ordered-express-count',
-      'ordered-two-gap',
-      'temporal-v3',
-    ];
-
-    if (scenario.policy && ordered !== orderedPolicies.includes(scenario.policy))
-      throw Error('Recovery rule does not match model semantics. Convert the scenario explicitly.');
-
-    if (scenario.policy === 'temporal-v3')
+    const policies = ['hold', 'express', 'express-count', 'two-gap', 'temporal'];
+    if (scenario.policy && !policies.includes(scenario.policy))
+      throw Error('Unknown automatic dispatch policy.');
+    if (scenario.policy === 'temporal')
       this.definition.policyOptions = normalizeControllerOptions(
         scenario.policyOptions,
         this.config,
       );
-    else if (['two-gap', 'ordered-two-gap'].includes(scenario.policy))
+    else if (scenario.policy === 'two-gap')
       this.definition.policyOptions = normalizeGapPolicy(scenario.policyOptions, this.config);
-    else if (
-      scenario.policy &&
-      !['hold', 'express', 'express-count', ...orderedPolicies].includes(scenario.policy)
-    )
-      throw Error('Unknown automatic dispatch policy.');
 
     if (scenario.policySchedule) {
       const { start, end, interval } = scenario.policySchedule;
-      const temporal = scenario.policy === 'temporal-v3';
+      const temporal = scenario.policy === 'temporal';
       if (
         ![start, end].every(Number.isFinite) ||
         start < 0 ||
@@ -173,11 +151,7 @@ export class Experiment {
 
       data.scenarioId,
 
-      data.scenarioText
-        ? parseScenario(data.scenarioText)
-        : data.config?.semantics === 'ordered-v3'
-          ? null
-          : (historicalScenarios.find((s) => s.id === data.scenarioId) ?? null),
+      parseScenario(data.scenarioText),
     );
 
     checkInterventionCount(e.definition.events.length + data.commands.length);
@@ -230,7 +204,7 @@ export class Experiment {
         ...this.commands.map((x) => ({ ...x, source: 'manual' })),
       ];
 
-    if (scenario.policy && scenario.policy !== 'temporal-v3') {
+    if (scenario.policy && scenario.policy !== 'temporal') {
       const { start = 1500, end = 3600, interval = 30 } = scenario.policySchedule || {};
 
       for (let i = 0; start + i * interval <= end; i++)
@@ -245,17 +219,9 @@ export class Experiment {
         });
     }
 
-    // Live manual dispatch follows any checks that already ran at this instant.
-
-    // Preserve that same order when replaying or importing exported commands.
-
-    if (this.config.semantics === 'ordered-v3')
-      return events.sort(
-        (a, b) => a.t - b.t || (a.type === 'policy' ? 1 : b.type === 'policy' ? -1 : 0),
-      );
-
+    // Manual instructions precede automatic checks at the same timestamp.
     return events.sort(
-      (a, b) => a.t - b.t || (a.type === 'policy' ? -1 : b.type === 'policy' ? 1 : 0),
+      (a, b) => a.t - b.t || (a.type === 'policy' ? 1 : b.type === 'policy' ? -1 : 0),
     );
   }
 
@@ -274,7 +240,7 @@ export class Experiment {
 
     replacement.policyBudgets = new Map();
 
-    if (this.definition.policy === 'temporal-v3')
+    if (this.definition.policy === 'temporal')
       replacement.sim.configureController(
         this.definition.policyOptions,
         this.definition.policySchedule || { start: 1500, end: 3600 },
@@ -305,43 +271,16 @@ export class Experiment {
 
   advanceTo(target) {
     if (!Number.isFinite(target) || target < this.sim.time) throw Error('Invalid target time');
-
     if (target > MAX_SIMULATION_SECONDS)
       throw Error('Seven-day run limit reached. Export the data, then reset to start another run.');
-
     try {
       while (this.cursor < this.events.length && this.events[this.cursor].t <= target) {
-        const event = this.events[this.cursor];
-
-        if (this.config.semantics === 'ordered-v3') {
-          this.advanceModel(event.t, () => {
-            while (this.cursor < this.events.length && this.events[this.cursor].t === event.t)
-              this.applyScheduled(this.events[this.cursor++]);
-          });
-
-          continue;
-        }
-
-        this.advanceModel(event.t);
-
-        if (event.type === 'policy') this.dispatch(event.policy);
-        else {
-          // A combined delay may become invalid only when its scheduled time arrives.
-
-          // Keep this visible in the dispatch log and allow the lesson to continue.
-
-          try {
-            this.sim.action(event.bus, event.type, event.value);
-          } catch (error) {
-            this.sim.note(
-              `Skipped ${event.source} dispatch for Bus ${event.bus + 1}: ${error.message}`,
-            );
-          }
-        }
-
-        this.cursor++;
+        const time = this.events[this.cursor].t;
+        this.advanceModel(time, () => {
+          while (this.cursor < this.events.length && this.events[this.cursor].t === time)
+            this.applyScheduled(this.events[this.cursor++]);
+        });
       }
-
       this.advanceModel(target);
     } finally {
       this.furthest = Math.max(this.furthest, this.sim.time);
@@ -405,94 +344,31 @@ export class Experiment {
     )
       throw Error('New interventions must lie between cohort start and inclusive arrival cutoff.');
 
-    if (this.config.semantics === 'ordered-v3') {
-      // A live command at an already-rendered timestamp has the same priority as
-      // an imported command there. Rebuild the boundary so automatic decisions
-      // cannot depend on whether that timestamp was viewed before the click.
-      const probe = Object.assign(
-        Object.create(Object.getPrototypeOf(this.sim)),
-        structuredClone(this.sim),
-      );
-      probe.action(bus, type, value);
-      commands.push({ t, bus, type, value: structuredClone(value) });
-      const replacement = Object.assign(Object.create(Experiment.prototype), this, {
-        commands,
-        furthest: t,
-      });
-      replacement.rebuild(t);
-      Object.assign(this, replacement);
-      return;
-    }
-    this.sim.action(bus, type, value); // Engine validation completes before any mutation.
-
+    // A live command at an already-rendered timestamp has the same priority as
+    // an imported command there. Rebuild the boundary so automatic decisions
+    // cannot depend on whether that timestamp was viewed before the click.
+    const probe = Object.assign(
+      Object.create(Object.getPrototypeOf(this.sim)),
+      structuredClone(this.sim),
+    );
+    probe.action(bus, type, value);
     commands.push({ t, bus, type, value: structuredClone(value) });
-
-    this.commands = commands;
-
-    this.furthest = t;
-
-    this.events = this.schedule();
-
-    this.cursor = this.events.findIndex((event) => event.t > t);
-
-    if (this.cursor < 0) this.cursor = this.events.length;
-
-    this.sim.advance(0);
+    const replacement = Object.assign(Object.create(Experiment.prototype), this, {
+      commands,
+      furthest: t,
+    });
+    replacement.rebuild(t);
+    Object.assign(this, replacement);
   }
 
   dispatch(policy) {
-    if (policy.startsWith('ordered-')) return this.dispatchOrdered(policy);
-
-    // Only explicit legacy-v2 rules reach this historical minimum-gap adapter.
-    if (policy === 'two-gap') return this.dispatchTwoGap();
-
-    const s = this.sim,
-      n = s.c.stops,
-      ideal = n / s.c.buses;
-
-    for (const b of s.buses) {
-      if (
-        b.phase === 'travel' ||
-        b.pendingHold ||
-        b.holdUntil > s.time ||
-        b.express ||
-        b.pendingExpress ||
-        b.recoveryExpress ||
-        b.servicePlan
-      )
-        continue;
-
-      const p = s.position(b);
-
-      let gap = n;
-
-      for (const other of s.buses)
-        if (other !== b) gap = Math.min(gap, (s.position(other) - p + n) % n);
-
-      if (policy === 'hold' && gap < ideal * 0.95) {
-        s.action(b.id, 'hold', Math.min(120, Math.max(1, (ideal - gap) * s.c.travel * 2.5)));
-      }
-
-      if (policy === 'express' && gap > ideal * 1.25) {
-        s.action(b.id, 'recovery', 1);
-      }
-
-      if (policy === 'express-count' && gap > ideal * 1.25) {
-        s.action(b.id, 'express', Math.min(n - 1, Math.max(1, Math.ceil(gap - ideal))));
-      }
-    }
-  }
-
-  dispatchOrdered(policy) {
     const s = this.sim,
       snapshot = s.neighborSnapshot(),
       ideal = s.c.stops / s.c.buses;
 
     const options = this.definition.policyOptions;
 
-    const holds =
-      policy === 'ordered-hold' ||
-      (policy === 'ordered-two-gap' && options.response.type === 'hold');
+    const holds = policy === 'hold' || (policy === 'two-gap' && options.response.type === 'hold');
 
     const coincidentLeader = ({ ahead, behind }) => behind <= 1e-8 && ahead > 1e-8;
 
@@ -509,9 +385,7 @@ export class Experiment {
       kind === 'any' ||
       (kind === 'small' ? gap < ideal * options.small : gap > ideal * options.large);
 
-    let unrestricted = s.buses.filter(
-      (b) => !b.servicePlan && !b.express && !b.pendingExpress,
-    ).length;
+    let unrestricted = s.buses.filter((b) => !b.servicePlan).length;
 
     const candidates = snapshot.order
       .map((id) => ({ b: s.buses[id], ...snapshot.byId[id] }))
@@ -523,21 +397,21 @@ export class Experiment {
           b.holdUntil <= s.time &&
           (b.autoHoldUntil ?? 0) <= s.time &&
           this.policyVisits.get(b.id) !== b.stopStart &&
-          (policy !== 'ordered-two-gap' ||
+          (policy !== 'two-gap' ||
             (matches(options.ahead, ahead) && matches(options.behind, behind))),
       );
 
     for (const { b, ahead, behind } of candidates) {
       let type, value;
 
-      if (policy === 'ordered-two-gap') ({ type, value } = options.response);
-      else if (policy === 'ordered-hold' && ahead < ideal * 0.95) {
+      if (policy === 'two-gap') ({ type, value } = options.response);
+      else if (policy === 'hold' && ahead < ideal * 0.95) {
         type = 'hold';
         value = Math.max(1, (ideal - ahead) * s.c.travel * 2.5);
-      } else if (ahead > ideal * 1.25 && policy === 'ordered-express') {
+      } else if (ahead > ideal * 1.25 && policy === 'express') {
         type = 'pattern';
         value = { leadStops: 0, every: 2, stops: null, untilRecovered: true, maxSeconds: 600 };
-      } else if (ahead > ideal * 1.25 && policy === 'ordered-express-count') {
+      } else if (ahead > ideal * 1.25 && policy === 'express-count') {
         type = 'express';
         value = Math.min(s.c.stops - 1, Math.max(1, Math.ceil(ahead - ideal)));
       }
@@ -576,54 +450,6 @@ export class Experiment {
 
     for (const bus of releaseLeaders)
       s.releaseAutomaticHold(bus, 'coincident group leader retains departure opportunity');
-  }
-
-  dispatchTwoGap() {
-    const s = this.sim,
-      options = this.definition.policyOptions,
-      ideal = s.c.stops / s.c.buses;
-
-    const matches = (kind, gap) =>
-      kind === 'any' ||
-      (kind === 'small' ? gap < ideal * options.small : gap > ideal * options.large);
-
-    const restricted = (b) =>
-      Boolean(b.servicePlan || b.express || b.pendingExpress || b.recoveryExpress);
-
-    let localBuses = s.buses.filter((b) => !restricted(b)).length;
-
-    // Decide from a single positional snapshot, before any of these actions run.
-
-    const candidates = s.buses
-
-      .map((b) => ({ b, ...s.gaps(b) }))
-
-      .filter(
-        ({ b, ahead, behind }) =>
-          b.phase !== 'travel' &&
-          !restricted(b) &&
-          !b.pendingHold &&
-          b.holdUntil <= s.time &&
-          this.policyVisits.get(b.id) !== b.stopStart &&
-          matches(options.ahead, ahead) &&
-          matches(options.behind, behind),
-      );
-
-    for (const { b, ahead, behind } of candidates) {
-      const { type, value } = options.response;
-
-      if (type !== 'hold' && localBuses <= 1) continue;
-
-      s.action(b.id, type, value);
-
-      this.policyVisits.set(b.id, b.stopStart);
-
-      if (type !== 'hold') localBuses--;
-
-      s.note(
-        `Two-gap rule: Bus ${b.id + 1}, ahead ${ahead.toFixed(2)} / behind ${behind.toFixed(2)} stops; ${type === 'dropoff' ? 'drop-off-only' : type === 'pattern' ? 'announced skip pattern' : 'hold'}.`,
-      );
-    }
   }
 
   upcoming() {

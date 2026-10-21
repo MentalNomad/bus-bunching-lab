@@ -4,7 +4,7 @@ import { Simulation } from '../dist/engine.js';
 import { evaluateControllerBatch } from '../dist/controller.js';
 
 function timerFixture(kind) {
-  const sim = new Simulation({ semantics: 'ordered-v3', buses: 1, rate: 0, stopOverhead: 1.5 });
+  const sim = new Simulation({ buses: 1, rate: 0, stopOverhead: 1.5 });
   sim.time = 100;
   Object.assign(sim.buses[0], {
     target: 0,
@@ -40,7 +40,7 @@ for (const kind of ['overheadUntil', 'holdUntil', 'autoHoldUntil'])
   });
 
 test('future door completion survives repeated advance(0)', () => {
-  const sim = new Simulation({ semantics: 'ordered-v3', buses: 1, rate: 0, board: 2 });
+  const sim = new Simulation({ buses: 1, rate: 0, board: 2 });
   sim.time = 100;
   const bus = sim.buses[0];
   Object.assign(bus, {
@@ -69,7 +69,7 @@ test('future door completion survives repeated advance(0)', () => {
 });
 
 test('a manual event reassesses active automatic holds before unfinished doors', () => {
-  const sim = new Simulation({ semantics: 'ordered-v3', rate: 3, board: 20 });
+  const sim = new Simulation({ rate: 3, board: 20 });
   sim.time = 100;
   sim.stops.forEach((stop) => {
     stop.next = Infinity;
@@ -116,7 +116,6 @@ test('a manual event reassesses active automatic holds before unfinished doors',
 
 function heldStop() {
   const sim = new Simulation({
-    semantics: 'ordered-v3',
     stops: 12,
     buses: 2,
     rate: 0,

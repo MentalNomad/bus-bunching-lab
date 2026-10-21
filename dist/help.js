@@ -6,27 +6,25 @@ const text = {
   'Trips completed':
     'Passengers who have finished debarking at their intended destination. A forced transfer does not complete a trip. The arrival count is everyone who has entered the system.',
   'Mean queue wait':
-    'Arithmetic mean of cumulative queue wait for completed passengers only. Includes the initial queue and every transfer queue; excludes boarding and time aboard. People still waiting or riding are excluded, so compare this with the current passenger counts.',
+    'Arithmetic mean of cumulative queue wait for completed passengers only. Includes the initial queue; excludes boarding and time aboard. People still waiting or riding are excluded, so compare this with the current passenger counts.',
   'Mean system time':
-    'Arithmetic mean of final debarking time minus first arrival time for completed passengers. Includes initial queue wait, boarding, riding, onboard holds, transfer queues, and debarking. This is the whole-run mean, not the chart’s trailing average.',
-  'Forced transfers':
-    'Number of times passengers are put off a bus because their destination will be skipped. Each must queue and board a later bus. One passenger can transfer more than once.',
+    'Arithmetic mean of final debarking time minus first arrival time for completed passengers. Includes initial queue wait, boarding, riding, onboard holds, and debarking. This is the whole-run mean, not the chart’s trailing average.',
   'Oldest current queue wait':
-    'Longest uninterrupted queue episode among everyone currently waiting: now minus entry into this queue. A transfer starts a new episode. Excludes anyone already boarding. Shows delays that completed-trip averages cannot yet include.',
+    'Longest uninterrupted queue episode among everyone currently waiting: now minus entry into this queue. Excludes anyone already boarding. Shows delays that completed-trip averages cannot yet include.',
   'Mean current queue wait':
-    'Mean elapsed wait in the current queue episode for everyone waiting now, including transfer queues. Excludes boarding. Unlike Mean queue wait, this describes unfinished waiting passengers, not completed trips.',
+    'Mean elapsed wait in the current queue episode for everyone waiting now. Excludes boarding. Unlike Mean queue wait, this describes unfinished waiting passengers, not completed trips.',
   'Passed-over passengers':
-    'One count per waiting passenger per restricted bus visit, including a bus skipping the stop entirely. The same person can be counted on multiple visits. The unique count counts each affected passenger once. These are boarding restrictions, not necessarily forced transfers.',
+    'One count per waiting passenger per restricted bus visit, including a bus skipping the stop entirely. The same person can be counted on multiple visits. The unique count counts each affected passenger once. Each count represents an opportunity the passenger could not use.',
   'Passenger time accrued':
     'Sum of completed trip times plus time since first arrival for every unfinished passenger, including boarding. Shown in passenger-minutes (p-min); CSV uses passenger-seconds. Compare at matching clock times and demand. This is total passenger time already spent, not an average or a prediction of final trip duration.',
   'HEADWAY VARIATION':
     'Spatial gap standard deviation divided by the ideal gap, shown as a percentage. Ideal gap = stops ÷ buses. 0% means evenly spaced; larger values mean less even spacing. This measures spacing around the route, not minutes between arrivals or passenger welfare.',
   'Total system time per completed passenger':
-    'One point per completed trip: seconds from first arrival in a stop queue to final debarking. Includes initial wait, transfer waits, all service time, travel, and holds. Unfinished trips have no point yet.',
+    'One point per completed trip: seconds from first arrival in a stop queue to final debarking. Includes initial wait, all service time, travel, and holds. Unfinished trips have no point yet.',
   'Time stopped per station':
     'Seconds from arrival at a served stop to departure, including boarding, debarking, and holds. Recorded on departure. Stops passed in express service are not served-stop observations.',
   'Cumulative queue wait per passenger at boarding':
-    'Queue wait accumulated by this passenger up to this pickup, including earlier transfer queues. Recorded once boarding finishes, plotted at boarding start. A transferred passenger can appear at multiple pickups; these are observations, not unique passengers.',
+    'Seconds from arrival in the queue to the start of boarding. Recorded once boarding finishes, plotted at boarding start.',
   'Low · last minute':
     'Smallest individual observation whose plotted time falls within the last 60 simulated seconds (including the boundary). A dash means none occurred. This is not the lowest value over the whole run.',
   'High · last minute':
@@ -36,7 +34,7 @@ const text = {
 };
 const control = {
   stoppingDelay:
-    'Extra seconds lost slowing into each served stop, before fixed overhead and doors. This lumped time penalty overlaps a hold. A genuinely skipped stop pays zero. Requires the corrected model.',
+    'Extra seconds lost slowing into each served stop, before fixed overhead and doors. This lumped time penalty overlaps a hold. A genuinely skipped stop pays zero.',
   startingDelay:
     'Extra seconds lost regaining speed after each served stop, added to the following road segment. Segment motion remains linear at its effective speed. Skipped stops pay zero. Initial buses already traveling pay no startup penalty.',
   stops: 'Number of stops around the loop. Buses begin evenly spaced. Stops are numbered from 1.',
@@ -49,8 +47,7 @@ const control = {
     'Fixed arrivals use regular intervals synchronized across stops. Poisson arrivals use independent random intervals with this mean rate, so demand varies even with identical settings.',
   board:
     'Seconds to board one passenger. Boarding is sequential, after debarking; arrivals continue during service.',
-  debark:
-    'Seconds to debark one passenger. Debarking is sequential and includes forced express transfers.',
+  debark: 'Seconds to debark one passenger. Debarking is sequential.',
   ride: 'Fixed mode uses this many stops. Random mode chooses a uniform integer from 1 to min(2 × this length − 1, stops − 1).',
   rideMode:
     'Fixed rides all have the configured stop count. Random rides use a uniform range around that count, capped below one full loop.',
@@ -72,9 +69,9 @@ const control = {
   slowValue:
     'Multiply remaining time on this segment if moving, or time on the next segment otherwise. A value of 3 means three times the normal remaining travel time.',
   expressValue:
-    'Number of consecutive stops to skip after the current service stop, or after the next stop if moving. Historical runs transfer riders for skipped destinations. Corrected runs protect accepted drop-offs and restrict only new boarding.',
+    'Number of consecutive stops to skip after the current service stop, or after the next stop if moving. Accepted drop-offs remain protected; only new boarding is restricted.',
   dropoffEnd:
-    'End after a count of restricted stop locations, when spacing recovers, or when canceled. Every option also has a time cap. Recovery is checked on arrivals: historical runs require ahead at most 110% and behind at least 90% of target; corrected runs require only the forward gap at most 110%.',
+    'End after a count of restricted stop locations, when spacing recovers, or when canceled. Every option also has a time cap. Recovery is checked on arrivals: the forward gap must be at most 110% of target.',
   dropoffStops:
     'How many locations have no new boarding, including the current service stop or next stop if moving. All accepted riders keep their destination drop-offs.',
   dropoffLimit:
@@ -86,7 +83,7 @@ const control = {
   patternEvery:
     'After the lead-in, skip K minus 1 locations and serve one, repeatedly. K=2 alternates; K=3 skips two then serves one. Protected accepted drop-offs are extra stops with no boarding.',
   patternEnd:
-    'Choose a fixed span, recovery, or ongoing service until cancellation or the time cap. Historical recovery uses both gaps. Corrected recovery ends when the ordered forward gap is at most 110% of target, regardless of a large rear gap; the cap always applies.',
+    'Choose a fixed span, recovery, or ongoing service until cancellation or the time cap. Recovery ends when the ordered forward gap is at most 110% of target, regardless of a large rear gap; the cap always applies.',
   patternStops:
     'Number of active pattern locations after the lead-in; counts both served and skipped locations. Two locations with K=3 make one consecutive two-stop skip block, then normal service resumes.',
   patternLimit:
@@ -94,7 +91,7 @@ const control = {
   pattern:
     'Announce a future service pattern. Every accepted drop-off is honored, and new riders board only if their first upcoming destination visit will be served. No forced transfers are created by this mode.',
   normal:
-    'Cancel this bus’s drop-off-only, announced pattern and legacy express restrictions. Existing holds and slowdowns remain. It also cancels announced patterns that have not started yet.',
+    'Cancel this bus’s drop-off-only, announced pattern and express restrictions. Existing holds and slowdowns remain. It also cancels announced patterns that have not started yet.',
   gapAhead:
     'Condition on distance to the nearest bus ahead in the direction of travel. Small is strictly below the small threshold; large is strictly above the large threshold. Any ignores this direction.',
   gapBehind:
@@ -119,13 +116,13 @@ const control = {
   reset:
     'Restart the current setup and preset at time zero; clear manual interventions and observations.',
   export:
-    'Download every raw observation from the whole run as CSV. Wait rows represent pickups, so a transferred passenger can have multiple rows.',
+    'Download every raw observation from the whole run as CSV. Wait rows record boarding observations.',
   loadScenario:
     'Restart with the selected preset’s saved setup, seed, interventions, and recovery policy. Clears the current run.',
   exportScenario:
     'Export the active scenario with the applied setup and recorded manual interventions, starting from time zero. Includes future preset events, but not current passengers or chart settings.',
   importScenario:
-    'Paste a version 1 or 2 scenario, validate it, and save it as a custom preset in this browser. Choose Load scenario & reset to run it.',
+    'Paste a scenario, validate it, and save it as a custom preset in this browser. Choose Load scenario & reset to run it.',
   copyScenarioLink:
     'Copy a link to the selected built-in preset. It opens that preset’s original settings and scheduled events, paused at time zero. Use Export scenario for custom presets, edited settings or manual interventions.',
 };

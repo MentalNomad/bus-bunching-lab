@@ -1,25 +1,12 @@
-# Corrected controller and measurement contracts
+# Simulation, controller and measurement contracts
 
-The `ordered-v3` model repairs circular neighbor ordering and adds event control,
-complete passenger comparisons, bounded boarding, and optional physical assumptions.
-These are illustrative teaching rules, not calibrated transit forecasts or an optimal
-dispatch policy. The frozen research package outside this repository is unchanged.
+One simulation engine and one strict JSON scenario language implement circular neighbor ordering, event control, complete passenger comparisons, bounded boarding and optional physical assumptions. These are illustrative teaching rules, not calibrated transit forecasts or an optimal dispatch policy. Research snapshots outside this repository remain unchanged.
 
-## Compatibility and ordering
+## Circular ordering
 
-`engine.js` is an explicit factory. A configuration with no `semantics` uses
-`legacy-v2`; saved format 1/2 lessons retain their original minimum-distance gaps,
-two-sided recovery checks, sampled dispatch, and express transfers. The legacy
-adapter adds measurement ledgers and optional finite demand without changing old
-numerical outcomes. New corrected presets and format 3 documents explicitly declare
-`semantics: "ordered-v3"`. Converting creates a separate recipe; it does not alter
-the saved original or claim that its outcomes should match. Current built-in
-definitions live in `scenarios.js` and may evolve; export a complete recipe to
-pin a version. `historical-scenarios.js` preserves pre-recipe copies whose
-payload predates embedded scenario text. Current teaching presets all use
-five-second stopping and starting delays. Import/engine defaults remain zero.
+Current built-in definitions live in `scenarios.js`; export a complete recipe to preserve its exact settings. Every teaching preset uses five-second stopping and starting delays. Additional teaching variants explicitly set both to zero. Imported recipes declare all physical settings, with no format-version or model selector. Unrecognized fields and rule names are rejected. Saved experiment copies carry their complete recipe; there is no fallback to an older catalog or physics engine.
 
-Corrected free-overtaking gaps sort a copy of displayed positions, then exact ties
+Free-overtaking gaps sort a copy of displayed positions, then exact ties
 by ascending bus ID. Each bus has one immediate successor and predecessor. The
 last tied bus owns the long arc. There is exactly one circular wrap edge; each
 direction's gaps sum to the route length. Four coincident buses on 12 stops have
@@ -29,31 +16,29 @@ the ordering. Under no overtaking, the serialized initial circular `roadOrder`
 and unwrapped positions retain the physical leader when a queue meets across the
 route seam; sorting tied displayed positions alone would lose that information.
 
-All corrected manual `until_recovered` instructions end when the immediate
+All manual `until_recovered` instructions end when the immediate
 forward gap is at most 110% of `stops / buses`, or at expiry. With
 `until_recovered: true`, the stop-span count is ignored; with false it bounds
 the instruction instead of testing recovery.
 A tail bus can finish recovery with a large rear gap. A convoy leader still owns
-the long gap and does not falsely recover. Historical instructions retain their
-declared legacy semantics.
+the long gap and does not falsely recover.
 
 ## Event and temporal control
 
-At a shared timestamp the corrected engine processes passenger arrivals, plan
+At a shared timestamp the engine processes passenger arrivals, plan
 expirations, bus arrivals and previously started door completions. Listed manual
 commands then run, followed by one automatic decision batch from a common
 snapshot. New door operations and departures run last in bus-ID order. Zero-time
 doors finish safely at that timestamp without repeated automatic decisions.
 
-`temporal-cost-v3` uses the control window `[start_seconds, end_seconds)`.
+`passenger-cost` uses the control window `[start_seconds, end_seconds)`.
 Demand at `arrival_cutoff_seconds` is included; later arrivals are canceled,
-not simulated with a changed rate. The cutoff also ends new corrected automatic
+not simulated with a changed rate. The cutoff also ends new automatic
 control. At the end boundary, automatic holds and automatic restrictions restore
 normal service. Manual holds and bounded manual service plans continue safely
 until their own completion, cancellation or expiry. An alighting or boarding
 already underway always completes. `decisionMode: "polling"` samples the same
-new heuristic at `pollSeconds` for cadence comparisons; old sampled policies
-remain separate versioned rules.
+same heuristic at `pollSeconds` for cadence comparisons. Spatial polling rules remain separate policies with explicit bounds.
 
 Temporal history records actual usable stop/destination opportunities: actual
 boarding, or a departure that has a spare seat and permits that destination.
@@ -119,9 +104,8 @@ currently destination-eligible riders; ineligible riders remain in their queue
 with their original birth clocks. `drop_off_only` permits no new boarding.
 `announced_skip` immediately screens new destinations against an announced
 lead-in and every-Kth-location pattern. Existing accepted destinations always
-receive drop-offs, including exceptions at nominally skipped stops. A corrected
-`express` command becomes a protected consecutive skip block; forced transfers
-remain isolated in the legacy adapter.
+receive drop-offs, including exceptions at nominally skipped stops. An
+`express` command becomes a protected consecutive skip block.
 
 Before an automatic restriction, and before actual pass-over, safeguards inspect
 affected stops, destinations and waiting riders, including a plausible eligible
@@ -173,12 +157,10 @@ is secondary to passenger costs and unfinished demand.
 
 ## Optional physical assumptions
 
-Original format 3 model and observation fields are explicit. The optional stopping/starting fields default to zero when absent from older version 3 recipes. Optional physics require
-`ordered-v3`. Defaults retain zero overhead, unlimited capacity and overtaking.
+All model and observation fields are explicit in scenario documents. Defaults in the engine are zero maneuver/stop overhead, unlimited capacity and overtaking.
 
 | JSON model/observation field | Default                     | Bounds and meaning                                                   |
 | ---------------------------- | --------------------------- | -------------------------------------------------------------------- |
-| `semantics`                  | Explicit in format 3        | `legacy-v2` or `ordered-v3`                                          |
 | `stop_overhead_seconds`      | 0                           | 0–120 seconds, once per served visit, even empty                     |
 | `stopping_delay_seconds`     | 0                           | 0–120 seconds lost entering each served stop, before overhead/doors  |
 | `starting_delay_seconds`     | 0                           | 0–120 seconds added to the next segment after each served stop       |
@@ -197,7 +179,7 @@ acceleration model. Initial buses already traveling pay no starting penalty.
 Genuinely skipped stops pay neither maneuver penalty. Empty served stops and
 protected drop-offs pay both. Raw model/import defaults are zero; built-in
 lesson inputs start at five seconds each. Nonzero values
-require ordered-v3, preserving historical recipes and the frozen research.
+use the same event engine as every scenario.
 
 Overhead precedes sequential boarding/alighting and overlaps hold deadlines.
 A protected drop-off or a manual stop hold makes a nominal skip a served visit. A fully skipped stop pays no
@@ -242,7 +224,7 @@ isolating controller effects, and retain the provenance and exact exported recip
 
 ## Verification and study boundary
 
-Focused tests cover legacy parity, circular invariants/ties/seam, forward-only
+Focused tests cover circular invariants/ties/seam, forward-only
 recovery, same-time manual ordering, zero doors, overhead, capacity reservation
 and reuse, boarding allowances, continuous nonpassing/restart, inclusive demand
 cutoff, full demand identity, accounting and rendering-chunk independence.

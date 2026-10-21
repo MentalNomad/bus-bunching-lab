@@ -9,8 +9,6 @@ export function normalizeServiceAction(type, value, config) {
     return 1;
   }
   if (!['dropoff', 'pattern', 'boarding'].includes(type)) throw Error('Unknown service action.');
-  if (type === 'boarding' && config.semantics !== 'ordered-v3')
-    throw Error('Boarding allowances require ordered-v3 semantics.');
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw Error('Service instructions must be an object.');
   const fields = ['stops', 'untilRecovered', 'maxSeconds'];

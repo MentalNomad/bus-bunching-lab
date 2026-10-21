@@ -22,7 +22,7 @@ test('passenger conservation with fixed and stochastic demand, holds, slowdown a
       conserve(s);
     }
     assert(s.completed > 0);
-    assert(s.transfers > 0);
+    assert.equal(s.transfers, 0);
   }
 });
 test('deterministic seeds and independence from rendering step size', () => {
@@ -46,23 +46,23 @@ test('fixed delay breaks the balanced route', () => {
   assert(delayed.summary().meanWait > baseline.summary().meanWait);
   console.log('Balanced vs delayed:', baseline.summary(), delayed.summary());
 });
-test('express unloads riders bound for skipped stops and retains arrival timestamps', () => {
+test('express protects riders bound for a skipped stop and retains original journey clocks', () => {
   const s = new Simulation({ stops: 6, buses: 1, rate: 0, travel: 10, board: 2, debark: 1 });
   const p = { id: 1, born: 0, queued: 0, wait: 7, dest: 3 };
   s.created = 1;
   s.buses[0].load.push(p);
   s.action(0, 'express', 2);
   s.advance(11);
-  assert.equal(s.transfers, 1);
-  assert.equal(s.stops[1].queue[0], p);
-  assert.equal(p.born, 0);
-  assert.equal(p.wait, 7);
+  assert.equal(s.transfers, 0);
+  assert(s.buses[0].load.includes(p));
+  assert.equal(s.stops[1].queue.length, 0);
   s.advance(120);
   assert.equal(s.completed, 1);
-  assert.equal(s.series.length, 1);
-  assert(s.series[0].wait > 7);
+  assert.equal(s.series[0].wait, 7);
+  assert.equal(p.born, 0);
   conserve(s);
 });
+
 test('holding clock advances and service includes hold time', () => {
   const s = new Simulation({ rate: 0, buses: 1, travel: 10 });
   s.action(0, 'hold', 30);
