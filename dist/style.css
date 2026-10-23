@@ -127,6 +127,50 @@ h3 {
   border-radius: 15px;
   padding: 22px;
 }
+.panel.section-disclosure {
+  padding: 0;
+}
+.section-disclosure > .section-disclosure-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 22px;
+  list-style: none;
+  border-radius: 15px;
+}
+.section-disclosure-title::-webkit-details-marker {
+  display: none;
+}
+.section-disclosure-title::before {
+  content: '›';
+  color: #66765d;
+  font-size: 22px;
+  line-height: 1;
+}
+.section-disclosure[open] > .section-disclosure-title::before {
+  transform: rotate(90deg);
+}
+.section-disclosure-title > h2,
+.section-disclosure-title > h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 17px;
+}
+.section-disclosure-state {
+  color: #66765d;
+  font-size: 12px;
+  font-weight: 400;
+}
+.section-disclosure:not([open]) > summary .disclosure-hide,
+.section-disclosure[open] > summary .disclosure-show {
+  display: none;
+}
+.section-disclosure > .panel {
+  padding-top: 0;
+  border: 0;
+  border-radius: 0 0 15px 15px;
+  background: transparent;
+}
 .section-title {
   display: flex;
   justify-content: space-between;
@@ -361,6 +405,9 @@ button.subtle {
   min-height: 18px;
   margin-top: 15px;
 }
+#message:empty {
+  display: none;
+}
 .metrics {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -579,6 +626,9 @@ footer {
   .workspace {
     grid-template-columns: 230px minmax(0, 1fr);
   }
+  .dispatch-disclosure {
+    grid-column: 1 / -1;
+  }
   .dispatch {
     grid-column: 1/-1;
     display: grid;
@@ -587,8 +637,7 @@ footer {
   }
   .dispatch > .section-title,
   .dispatch > p,
-  .dispatch > label,
-  .dispatch > #message {
+  .dispatch > label {
     grid-column: 1/-1;
   }
   .dispatch > #policyControls,

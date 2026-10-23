@@ -190,7 +190,7 @@ export function setupHelp() {
   window.addEventListener('resize', hide);
   function annotate() {
     for (const el of document.querySelectorAll(
-      '.metric>span,.chart-numbers>span,.route-center>span,.system-chart h3,.bus-chart h4',
+      '.metric>span,.chart-numbers>span,.route-center>span,.system-chart h3,.section-disclosure-title h3,.bus-chart h4',
     )) {
       const label = el.firstChild?.textContent?.trim();
       if (text[label]) {

@@ -1,4 +1,27 @@
 // Move complete working sections; use buttons so keyboard and touch work too.
+function collapsible(panel) {
+  const disclosure = document.createElement('details'),
+    summary = document.createElement('summary'),
+    heading = panel.querySelector('h2, h3'),
+    headingRow = heading.parentElement;
+  disclosure.className = 'panel section-disclosure';
+  if (panel.classList.contains('dispatch')) disclosure.classList.add('dispatch-disclosure');
+  summary.className = 'section-disclosure-title';
+  summary.append(heading);
+  if (headingRow.classList.contains('section-title')) headingRow.remove();
+  const state = document.createElement('span');
+  state.className = 'section-disclosure-state';
+  state.setAttribute('aria-hidden', 'true');
+  state.innerHTML =
+    '<span class="disclosure-show">Show</span><span class="disclosure-hide">Hide</span>';
+  summary.append(state);
+  panel.replaceWith(disclosure);
+  disclosure.append(summary, panel);
+  // A canvas needs its expanded dimensions, including when playback is paused.
+  disclosure.addEventListener('toggle', () => window.dispatchEvent(new Event('resize')));
+  return disclosure;
+}
+
 export function setupLayout() {
   const main = document.querySelector('main'),
     workspace = document.querySelector('.workspace'),
@@ -6,9 +29,11 @@ export function setupLayout() {
     charts = document.querySelector('.charts-panel'),
     bottom = document.querySelector('.bottom');
   const library = document.querySelector('.scenario-panel');
-  const setup = workspace.querySelector('.settings'),
+  const setup = collapsible(workspace.querySelector('.settings')),
     live = workspace.querySelector('.route-panel'),
-    dispatch = workspace.querySelector('.dispatch');
+    dispatch = collapsible(workspace.querySelector('.dispatch'));
+  // Playback errors and intervention feedback must remain visible with Dispatch closed.
+  live.querySelector('.toolbar').after(document.getElementById('message'));
   const container = document.createElement('div');
   container.id = 'sections';
   main.insertBefore(container, library);
@@ -21,16 +46,15 @@ export function setupLayout() {
   buses.classList.add('panel');
   const h = document.createElement('h2');
   h.textContent = 'Per-bus statistics';
-  h.style.gridColumn = '1 / -1';
   buses.prepend(h);
   const sections = [
     ['route', 'Live route & dispatch', workspace],
     ['summary', 'System summary', metrics],
-    ['log', 'Dispatch history', bottom.children[0]],
+    ['log', 'Dispatch history', collapsible(bottom.children[0])],
     ['comparison', 'Passenger comparisons', document.querySelector('.comparison-panel')],
-    ['chart-settings', 'Chart settings', settings],
-    ['system', 'System chart', system],
-    ['buses', 'Bus charts', buses],
+    ['chart-settings', 'Chart settings', collapsible(settings)],
+    ['system', 'System chart', collapsible(system)],
+    ['buses', 'Bus charts', collapsible(buses)],
     ['definitions', 'Model definitions', bottom.children[1]],
     ['scenarios', 'Scenario Library', library],
   ];

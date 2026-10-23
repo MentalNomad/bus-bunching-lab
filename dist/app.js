@@ -3,9 +3,9 @@ import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261021a';
 import { Experiment, scenarios } from './experiment.js?v=20261021a';
 import { chartData, sharedScale } from './chart-data.js?v=20261021a';
 import { updateChartInspection, clearChartInspection } from './chart-inspection.js?v=20261021a';
-import { setupLayout } from './layout.js?v=20261021a';
+import { setupLayout } from './layout.js?v=20261023a';
 import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261021a';
-import { setupHelp } from './help.js?v=20261021a';
+import { setupHelp } from './help.js?v=20261023a';
 import { scenarioFromSearch } from './scenario-links.js?v=20261021a';
 import { advanceMaxSpeed, advanceTimedSpeed } from './playback.js?v=20261021a';
 loadCustomPresets();
@@ -53,10 +53,6 @@ function initialize() {
         `<article class="bus-chart"><h3 style="color:${colors[b.id]}">● Bus ${b.id + 1}</h3><h4>Time stopped per station</h4><p>Service + holding · seconds · sampled on departure</p><div class="chart-numbers" id="dwellNumbers${b.id}"></div><canvas id="dwell${b.id}" role="img" aria-label="Bus ${b.id + 1} dwell time graph"></canvas><h4>Cumulative queue wait per passenger at boarding</h4><p>Initial queue wait · seconds · sampled at boarding</p><div class="chart-numbers" id="waitNumbers${b.id}"></div><canvas id="wait${b.id}" role="img" aria-label="Bus ${b.id + 1} passenger wait graph"></canvas><div class="chart-key">● Observation &nbsp; ━ Trailing average</div></article>`,
     )
     .join('');
-  const heading = document.createElement('h2');
-  heading.textContent = 'Per-bus statistics';
-  heading.style.gridColumn = '1 / -1';
-  $('busCharts').prepend(heading);
   $('expressValue').max = sim.c.stops - 1;
   $('patternLead').max = sim.c.stops - 1;
   $('patternLead').value = Math.min(+$('patternLead').value, sim.c.stops - 1);
@@ -518,32 +514,36 @@ function renderCharts() {
     const value = +$(id).value;
     return Number.isFinite(value) && value >= 0 && value <= MAX_SIMULATION_SECONDS ? value : 0;
   };
-  const dwellMax = sharedScale(
-      sim.buses.map((b) => b.dwell),
-      sim.time,
-      n,
-      mode,
-      axis('dwellAxis'),
-    ),
-    waitMax = sharedScale(
-      sim.buses.map((b) => b.wait),
-      sim.time,
-      n,
-      mode,
-      axis('waitAxis'),
-    ),
-    systemMax = sharedScale([sim.series], sim.time, n, mode, axis('systemAxis'));
-  const systemView = chartData(sim.series, sim.time, n, mode);
-  chart($('systemChart'), sim.series, systemView, '#3f7960', systemMax);
-  numbers($('systemNumbers'), systemView, mode);
-  $('systemCount').textContent = `${sim.completed.toLocaleString()} completed passengers`;
-  for (const b of sim.buses) {
-    const dwellView = chartData(b.dwell, sim.time, n, mode),
-      waitView = chartData(b.wait, sim.time, n, mode);
-    chart($('dwell' + b.id), b.dwell, dwellView, colors[b.id], dwellMax);
-    numbers($('dwellNumbers' + b.id), dwellView, mode, true);
-    chart($('wait' + b.id), b.wait, waitView, colors[b.id], waitMax);
-    numbers($('waitNumbers' + b.id), waitView, mode);
+  if (!$('systemChart').closest('.section-disclosure:not([open])')) {
+    const systemMax = sharedScale([sim.series], sim.time, n, mode, axis('systemAxis')),
+      systemView = chartData(sim.series, sim.time, n, mode);
+    chart($('systemChart'), sim.series, systemView, '#3f7960', systemMax);
+    numbers($('systemNumbers'), systemView, mode);
+    $('systemCount').textContent = `${sim.completed.toLocaleString()} completed passengers`;
+  }
+  if (!$('busCharts').closest('.section-disclosure:not([open])')) {
+    const dwellMax = sharedScale(
+        sim.buses.map((b) => b.dwell),
+        sim.time,
+        n,
+        mode,
+        axis('dwellAxis'),
+      ),
+      waitMax = sharedScale(
+        sim.buses.map((b) => b.wait),
+        sim.time,
+        n,
+        mode,
+        axis('waitAxis'),
+      );
+    for (const b of sim.buses) {
+      const dwellView = chartData(b.dwell, sim.time, n, mode),
+        waitView = chartData(b.wait, sim.time, n, mode);
+      chart($('dwell' + b.id), b.dwell, dwellView, colors[b.id], dwellMax);
+      numbers($('dwellNumbers' + b.id), dwellView, mode, true);
+      chart($('wait' + b.id), b.wait, waitView, colors[b.id], waitMax);
+      numbers($('waitNumbers' + b.id), waitView, mode);
+    }
   }
   refreshHelp();
 }
