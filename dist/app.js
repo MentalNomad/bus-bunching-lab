@@ -392,7 +392,12 @@ function route() {
         : b.pendingHold
           ? 'H NEXT'
           : '';
-    svg += `<g><title>${badge ? badge + ': ' : ''}Bus ${b.id + 1}: ${b.load.length} onboard, ${b.phase}</title><rect x="${x - 14}" y="${y - 12}" width="28" height="24" rx="7" fill="${colors[b.id]}" stroke="white" stroke-width="2"/><text x="${x}" y="${y + 1}" text-anchor="middle" dominant-baseline="middle" class="bus-label">${b.id + 1}</text>${badge ? `<rect x="${x - 28}" y="${y - 34}" width="56" height="18" rx="4" fill="${held ? '#915b12' : '#25497a'}"/><text x="${x}" y="${y - 22}" text-anchor="middle" fill="white" font-size="11" font-weight="700">${badge}</text>` : ''}</g>`;
+    svg += `<g class="route-bus" transform="translate(${x},${y})" style="color:${colors[b.id]}">
+      <title>${badge ? badge + ': ' : ''}Bus ${b.id + 1}: ${b.load.length} onboard, ${b.phase}</title>
+      <use href="#route-bus-icon" x="-18" y="-21" width="36" height="42"/>
+      <text x="0" y="2" text-anchor="middle" dominant-baseline="middle" class="bus-label">${b.id + 1}</text>
+      ${badge ? `<rect x="-28" y="-43" width="56" height="18" rx="4" fill="${held ? '#915b12' : '#25497a'}"/><text x="0" y="-31" text-anchor="middle" fill="white" font-size="11" font-weight="700">${badge}</text>` : ''}
+    </g>`;
   }
   $('route').innerHTML = svg;
   $('planLegend').textContent = selectedBus.servicePlan
