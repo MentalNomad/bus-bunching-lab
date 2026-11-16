@@ -22,7 +22,11 @@ const text = {
   'Total system time per completed passenger':
     'One point per completed trip: seconds from first arrival in a stop queue to final debarking. Includes initial wait, all service time, travel, and holds. Unfinished trips have no point yet.',
   'Time stopped per station':
-    'Seconds from arrival at a served stop to departure, including boarding, debarking, and holds. Recorded on departure. Stops passed in express service are not served-stop observations.',
+    'Seconds from arrival at a served stop to departure, including boarding, debarking, and holds. Recorded on departure. The solid line averages the last three served visits; the dashed line averages as many served visits as there are stops on the configured route. Skipped stops are not observations or zero values.',
+  'Previous stop':
+    'Dwell at this bus’s most recently completed served stop, including service and holds. It remains available even if that stop was more than a minute ago. A stop currently being served is included only after departure.',
+  '3-stop average':
+    'Mean dwell over this bus’s last three completed served-stop visits. During startup it uses the visits available so far. Skipped stops do not add observations or zero values.',
   'Cumulative queue wait per passenger at boarding':
     'Seconds from arrival in the queue to the start of boarding. Recorded once boarding finishes, plotted at boarding start.',
   'Low · last minute':
@@ -30,7 +34,7 @@ const text = {
   'High · last minute':
     'Largest individual observation whose plotted time falls within the last 60 simulated seconds (including the boundary). A dash means none occurred. This is not the highest value over the whole run.',
   'Trailing average':
-    'Mean of the most recent observations, using the Trailing window setting. Whole-stop mode includes complete departed-stop groups, so it may exceed the requested count and remains unchanged until departure. Dwell averages use served stops; passenger averages use pickup or completion observations.',
+    'Mean of the most recent passenger observations, using the Trailing window setting. Whole-stop mode includes complete departed-stop groups, so it may exceed the requested count and remains unchanged until departure. Passenger averages use pickup or completion observations.',
 };
 const control = {
   stoppingDelay:
@@ -55,7 +59,7 @@ const control = {
   speed:
     'Simulated seconds per real second. Max runs as fast as your device allows, in short bursts that keep controls responsive. Charts still refresh periodically. Playback speed changes how fast you watch, not simulation outcomes.',
   window:
-    'Number of recent passenger observations for wait and system charts; number of served stops for dwell charts. Whole-stop mode retains entire groups, potentially using more than this number. Early runs use available observations.',
+    'Number of recent passenger observations for wait and system charts. Whole-stop mode retains entire groups, potentially using more than this number. Early runs use available observations. Dwell charts always use three served visits and a separate window equal to the route’s stop count.',
   averageMode:
     'Whole stop groups publish chart averages when the bus departs, avoiding partial boarding or debarking groups. Each passenger updates after each observation with exactly the last N observations. Raw individual points and actual service order remain unchanged.',
   dwellAxis:
@@ -133,17 +137,30 @@ export function setupHelp() {
   bubble.role = 'tooltip';
   bubble.hidden = true;
   document.body.append(bubble);
-  let active = null;
+  let active = null,
+    pending = null,
+    activeMode = null,
+    pendingMode = null,
+    timer = null,
+    pointerDown = false,
+    pointerFocus = false,
+    pointerType = null;
   function hide() {
+    clearTimeout(timer);
+    timer = null;
+    pending = null;
+    pendingMode = null;
     if (active) active.removeAttribute('aria-describedby');
     active = null;
+    activeMode = null;
     bubble.hidden = true;
   }
-  function show(target) {
-    if (!target?.dataset.help) return;
+  function show(target, mode) {
+    if (!target?.isConnected || !target.dataset.help) return;
     hide();
     (target.closest('dialog') || document.body).append(bubble);
     active = target;
+    activeMode = mode;
     bubble.textContent = target.dataset.help;
     bubble.hidden = false;
     target.setAttribute('aria-describedby', bubble.id);
@@ -154,40 +171,100 @@ export function setupHelp() {
       (r.bottom + b.height + 12 < innerHeight ? r.bottom + 8 : Math.max(8, r.top - b.height - 8)) +
       'px';
   }
+  function schedule(target, mode) {
+    if (!target?.dataset.help || pointerDown) return;
+    if (target === active) {
+      activeMode = mode;
+      return;
+    }
+    if (target === pending) {
+      pendingMode = mode;
+      return;
+    }
+    hide();
+    pending = target;
+    pendingMode = mode;
+    timer = setTimeout(() => show(target, pendingMode), 600);
+  }
   document.addEventListener('mouseover', (e) => {
-    const target = e.target.closest('[data-help]');
-    if (target && target !== active) show(target);
+    if (!e.buttons) schedule(e.target.closest('[data-help]'), 'hover');
   });
   document.addEventListener('mouseout', (e) => {
+    const target = active || pending,
+      mode = active ? activeMode : pendingMode;
     if (
-      active !== document.activeElement &&
-      active?.contains(e.target) &&
-      !active.contains(e.relatedTarget) &&
+      !(mode === 'focus' && target === document.activeElement) &&
+      target?.contains(e.target) &&
+      !target.contains(e.relatedTarget) &&
       !bubble.contains(e.relatedTarget)
     )
       hide();
   });
-  document.addEventListener('focusin', (e) => show(e.target.closest('[data-help]')));
+  bubble.addEventListener('mouseleave', (e) => {
+    if (activeMode !== 'focus' && !active?.contains(e.relatedTarget)) hide();
+  });
+  document.addEventListener('focusin', (e) => {
+    if (!pointerFocus) schedule(e.target.closest('[data-help]'), 'focus');
+  });
   document.addEventListener('focusout', (e) => {
-    if (active?.contains(e.target)) hide();
+    if ((active || pending)?.contains(e.target)) hide();
   });
-  document.addEventListener('click', (e) => {
-    const target = e.target.closest('[data-help]');
-    if (target) show(target);
-    else if (!bubble.contains(e.target)) hide();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') hide();
-  });
-  window.addEventListener(
-    'scroll',
-    () => {
-      if (active === document.activeElement) show(active);
-      else hide();
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      pointerDown = true;
+      pointerFocus = true;
+      pointerType = e.pointerType;
+      hide();
     },
     true,
   );
+  document.addEventListener(
+    'pointerup',
+    () => {
+      pointerDown = false;
+    },
+    true,
+  );
+  document.addEventListener(
+    'pointercancel',
+    () => {
+      pointerDown = false;
+      hide();
+    },
+    true,
+  );
+  document.addEventListener(
+    'click',
+    (e) => {
+      const target = e.target.closest('[data-help]');
+      hide();
+      // Tapping a read-only metric still offers help; operating a control never opens it.
+      if (
+        pointerType === 'touch' &&
+        target &&
+        !target.closest('button,input,select,textarea,summary,a,label,[role="button"]')
+      )
+        schedule(target, 'focus');
+    },
+    true,
+  );
+  document.addEventListener(
+    'keydown',
+    () => {
+      pointerFocus = false;
+      hide();
+    },
+    true,
+  );
+  document.addEventListener('input', hide, true);
+  document.addEventListener('change', hide, true);
+  window.addEventListener('scroll', hide, true);
   window.addEventListener('resize', hide);
+  window.addEventListener('blur', () => {
+    pointerDown = false;
+    hide();
+  });
   function annotate() {
     for (const el of document.querySelectorAll(
       '.metric>span,.chart-numbers>span,.route-center>span,.system-chart h3,.section-disclosure-title h3,.bus-chart h4',
@@ -199,13 +276,17 @@ export function setupHelp() {
       }
     }
     for (const el of document.querySelectorAll('.chart-numbers small')) {
-      el.dataset.help =
-        'Observation count covers the last simulated minute. Average count shows how many observations contribute to the current average. Updated is the simulated time the average was last published; raw values may change before a stop departs.';
+      el.dataset.help = el.closest('.dwell-numbers')
+        ? 'Counts show completed served visits available for the three-stop and route-length windows. Startup averages use the available visits. Previous identifies the last served stop; updated is its departure time. These values persist between departures and do not depend on the passenger trailing-window setting. Skipped stops are excluded.'
+        : 'Observation count covers the last simulated minute. Average count shows how many observations contribute to the current average. Updated is the simulated time the average was last published; raw values may change before a stop departs.';
       el.tabIndex = 0;
     }
     for (const el of document.querySelectorAll('.chart-key')) {
       el.dataset.help =
-        'Dots show individual observations; the solid line shows the trailing average. Horizontal axis: simulated minutes. Vertical axis: seconds. Only the last 60 minutes are drawn; averages can include earlier observations. Hover or tap a graph to inspect real observations and its average; left/right arrows work when the graph has focus. The nearest observation has its own timestamp; no individual values are interpolated.';
+        (el.classList.contains('dwell-key')
+          ? 'Dots show individual completed served-stop visits. The solid line is the three-stop average; the dashed line uses as many served visits as the configured route has stops. Startup uses the visits available; skipped stops add no zero values. '
+          : 'Dots show individual passenger observations; the solid line shows the trailing average. ') +
+        'Horizontal axis: simulated minutes. Vertical axis: seconds. Only the last 60 minutes are drawn; averages can include earlier observations. Hover or tap a graph to inspect real observations and its averages; left/right arrows work when the graph has focus. The nearest observation has its own timestamp; no individual values are interpolated.';
       el.tabIndex = 0;
     }
     for (const el of document.querySelectorAll('canvas')) {
@@ -222,7 +303,7 @@ export function setupHelp() {
       const explanation = control[el.name] || control[el.id];
       if (explanation) el.dataset.help = explanation;
     }
-    if (active && !active.isConnected) hide();
+    if ((active && !active.isConnected) || (pending && !pending.isConnected)) hide();
   }
   annotate();
   return annotate;

@@ -12,7 +12,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23182e2c'/%3E%3Cpath d='M9 9h14v14H9z' fill='%23c6ef72'/%3E%3Cpath d='M11 12h10v5H11z' fill='%23182e2c'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="style.css?v=20261023a" />
+    <link rel="stylesheet" href="style.css?v=20261116b" />
   </head>
   <body>
     <svg class="route-icon-definitions" aria-hidden="true" focusable="false">
@@ -523,7 +523,8 @@
             <p>
               Whole-stop averages avoid partial passenger groups; individual observations remain
               visible. Bus axes are shared. Fixed axis limits let you compare windows; values above
-              a fixed limit are clipped. Time is in simulation minutes.
+              a fixed limit are clipped. Time is in simulation minutes. Dwell charts use three-stop
+              and route-length averages; the controls below set passenger averages.
             </p>
           </div>
           <label
@@ -604,6 +605,10 @@
               whole-stop mode, chart averages publish at bus departure and include complete stop
               groups until at least N passenger observations are covered; unfinished groups are
               excluded from the average. Each-passenger mode uses exactly the last N observations.
+              Dwell readouts show the previous served stop and averages over the last three served
+              visits and the last route-length count of served visits. During startup they use the
+              visits available. Skipped stops add neither an observation nor a zero. The solid dwell
+              line uses three visits; the dashed line uses the configured route’s stop count.
               Averages may use earlier points outside the displayed range. Graphs show the last 60
               simulated minutes; CSV contains the whole run. Overlapping dots share screen pixels;
               statistics and CSV use every observation. To keep browser memory manageable, a run
@@ -635,6 +640,6 @@
       </div>
     </main>
     <footer>BUS BUNCHING LAB <span>Explore the gaps. Measure the passenger cost.</span></footer>
-    <script type="module" src="app.js?v=20261116a"></script>
+    <script type="module" src="app.js?v=20261116b"></script>
   </body>
 </html>

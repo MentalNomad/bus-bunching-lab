@@ -1,11 +1,11 @@
 import { setupModelControls } from './model-ui.js?v=20261021a';
 import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261021a';
 import { Experiment, scenarios } from './experiment.js?v=20261021a';
-import { chartData, sharedScale } from './chart-data.js?v=20261021a';
-import { updateChartInspection, clearChartInspection } from './chart-inspection.js?v=20261021a';
+import { chartData, dwellData, sharedScale } from './chart-data.js?v=20261116b';
+import { updateChartInspection, clearChartInspection } from './chart-inspection.js?v=20261116b';
 import { setupLayout } from './layout.js?v=20261023a';
 import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261021a';
-import { setupHelp } from './help.js?v=20261023a';
+import { setupHelp } from './help.js?v=20261116b';
 import { scenarioFromSearch } from './scenario-links.js?v=20261021a';
 import { advanceMaxSpeed, advanceTimedSpeed } from './playback.js?v=20261021a';
 loadCustomPresets();
@@ -50,7 +50,7 @@ function initialize() {
   $('busCharts').innerHTML = sim.buses
     .map(
       (b) =>
-        `<article class="bus-chart"><h3 style="color:${colors[b.id]}">● Bus ${b.id + 1}</h3><h4>Time stopped per station</h4><p>Service + holding · seconds · sampled on departure</p><div class="chart-numbers" id="dwellNumbers${b.id}"></div><canvas id="dwell${b.id}" role="img" aria-label="Bus ${b.id + 1} dwell time graph"></canvas><h4>Cumulative queue wait per passenger at boarding</h4><p>Initial queue wait · seconds · sampled at boarding</p><div class="chart-numbers" id="waitNumbers${b.id}"></div><canvas id="wait${b.id}" role="img" aria-label="Bus ${b.id + 1} passenger wait graph"></canvas><div class="chart-key">● Observation &nbsp; ━ Trailing average</div></article>`,
+        `<article class="bus-chart"><h3 style="color:${colors[b.id]}">● Bus ${b.id + 1}</h3><h4>Time stopped per station</h4><p>Service + holding · seconds · sampled on departure</p><div class="chart-numbers dwell-numbers" id="dwellNumbers${b.id}"></div><canvas id="dwell${b.id}" role="img" aria-label="Bus ${b.id + 1} dwell time graph"></canvas><div class="chart-key dwell-key">● Served stop &nbsp; ━ 3-stop average &nbsp; ┄ ${sim.c.stops}-stop average</div><h4>Cumulative queue wait per passenger at boarding</h4><p>Initial queue wait · seconds · sampled at boarding</p><div class="chart-numbers" id="waitNumbers${b.id}"></div><canvas id="wait${b.id}" role="img" aria-label="Bus ${b.id + 1} passenger wait graph"></canvas><div class="chart-key">● Observation &nbsp; ━ Trailing average</div></article>`,
     )
     .join('');
   $('expressValue').max = sim.c.stops - 1;
@@ -426,7 +426,7 @@ function route() {
     })
     .join('');
 }
-function chart(canvas, data, view, color, axisMax) {
+function chart(canvas, data, view, color, axisMax, options = {}) {
   const rect = canvas.getBoundingClientRect(),
     ratio = window.devicePixelRatio || 1,
     w = rect.width,
@@ -443,7 +443,6 @@ function chart(canvas, data, view, color, axisMax) {
     from = Math.max(0, sim.time - 3600),
     to = Math.max(60, sim.time);
   const points = view.raw,
-    averagePoints = view.averages,
     max = axisMax;
   canvas.dataset.axisMax = max;
   const x = (t) => left + ((t - from) / (to - from)) * (right - left),
@@ -489,15 +488,24 @@ function chart(canvas, data, view, color, axisMax) {
   ctx.globalAlpha = 1;
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
-  ctx.beginPath();
-  averagePoints.forEach((p, i) => {
-    if (i) {
-      ctx.lineTo(x(p.t), y(averagePoints[i - 1].v));
-      ctx.lineTo(x(p.t), y(p.v));
-    } else ctx.moveTo(x(p.t), y(p.v));
-  });
-  if (averagePoints.length) ctx.lineTo(x(sim.time), y(averagePoints.at(-1).v));
-  ctx.stroke();
+  const lines = options.secondaryAverage
+    ? [
+        [options.secondaryAverage.averages, [6, 4]],
+        [view.averages, []],
+      ]
+    : [[view.averages, []]];
+  for (const [averagePoints, dash] of lines) {
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    averagePoints.forEach((p, i) => {
+      if (i) {
+        ctx.lineTo(x(p.t), y(averagePoints[i - 1].v));
+        ctx.lineTo(x(p.t), y(p.v));
+      } else ctx.moveTo(x(p.t), y(p.v));
+    });
+    if (averagePoints.length) ctx.lineTo(x(sim.time), y(averagePoints.at(-1).v));
+    ctx.stroke();
+  }
   ctx.restore();
   if (!points.length) {
     ctx.fillStyle = '#78856f';
@@ -510,7 +518,17 @@ function chart(canvas, data, view, color, axisMax) {
       (top + bottom) / 2,
     );
   }
-  updateChartInspection(canvas, data, view, { left, right, top, bottom, from, to, max, color });
+  updateChartInspection(canvas, data, view, {
+    left,
+    right,
+    top,
+    bottom,
+    from,
+    to,
+    max,
+    color,
+    ...options,
+  });
 }
 function renderCharts() {
   const n = Math.max(1, Math.min(500, +$('window').value || 20)),
@@ -542,26 +560,43 @@ function renderCharts() {
         axis('waitAxis'),
       );
     for (const b of sim.buses) {
-      const dwellView = chartData(b.dwell, sim.time, n, mode),
+      const dwell = dwellData(b.dwell, sim.time, sim.c.stops),
         waitView = chartData(b.wait, sim.time, n, mode);
-      chart($('dwell' + b.id), b.dwell, dwellView, colors[b.id], dwellMax);
-      numbers($('dwellNumbers' + b.id), dwellView, mode, true);
+      chart($('dwell' + b.id), b.dwell, dwell.short, colors[b.id], dwellMax, {
+        averageLabel: '3-stop average',
+        secondaryAverage: { label: `${sim.c.stops}-stop average`, averages: dwell.route.averages },
+      });
+      dwellNumbers($('dwellNumbers' + b.id), dwell, sim.c.stops);
       chart($('wait' + b.id), b.wait, waitView, colors[b.id], waitMax);
       numbers($('waitNumbers' + b.id), waitView, mode);
     }
   }
   refreshHelp();
 }
-function numbers(el, v, mode, dwell = false) {
-  const fmt = (x) => (x === null ? '—' : x.toFixed(1) + ' s');
+const seconds = (value) => (value === null ? '—' : value.toFixed(1) + ' s');
+function dwellNumbers(el, data, stopCount) {
+  if (!el.children.length)
+    el.innerHTML =
+      '<span>Previous stop<strong></strong></span><span>3-stop average<strong></strong></span><span>Route average<strong></strong></span><small></small>';
+  const routeLabel = el.children[2];
+  routeLabel.firstChild.textContent = `${stopCount}-stop average`;
+  routeLabel.dataset.help = `Mean dwell over this bus’s last ${stopCount} completed served-stop visits. The window size equals the configured route’s stop count, including repeat visits; skipped stops add no observation or zero. Startup uses the visits available so far.`;
+  routeLabel.tabIndex = 0;
+  [data.previous?.v ?? null, data.short.average, data.route.average].forEach(
+    (value, i) => (el.children[i].querySelector('strong').textContent = seconds(value)),
+  );
+  el.querySelector('small').textContent =
+    `${data.previous ? `Previous: stop ${data.previous.stop + 1} · ` : 'No completed served stops yet · '}${data.short.averageCount}/3 and ${data.route.averageCount}/${stopCount} served visits${data.previous ? ` · updated ${clock(data.previous.t)}` : ''}`;
+}
+function numbers(el, v, mode) {
   if (!el.children.length)
     el.innerHTML =
       '<span>Low · last minute<strong></strong></span><span>High · last minute<strong></strong></span><span>Trailing average<strong></strong></span><small></small>';
   [v.low, v.high, v.average].forEach(
-    (value, i) => (el.children[i].querySelector('strong').textContent = fmt(value)),
+    (value, i) => (el.children[i].querySelector('strong').textContent = seconds(value)),
   );
   el.querySelector('small').textContent =
-    `${v.recentCount} observations in last minute · average of ${v.averageCount} ${dwell ? 'served-stop observations' : mode === 'batch' ? 'passenger observations in whole stop groups' : 'passenger observations'}${v.averageTime === null ? '' : ` · updated ${clock(v.averageTime)}`}`;
+    `${v.recentCount} observations in last minute · average of ${v.averageCount} ${mode === 'batch' ? 'passenger observations in whole stop groups' : 'passenger observations'}${v.averageTime === null ? '' : ` · updated ${clock(v.averageTime)}`}`;
 }
 function metrics(rows) {
   const root = $('metrics');

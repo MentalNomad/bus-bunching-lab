@@ -99,9 +99,15 @@ function show(state) {
   state.observation.textContent = p
     ? `Nearest observation: ${p.v.toFixed(1)} s · at ${clock(p.t)}${p.v > m.max ? ' (above axis)' : ''}`
     : 'No individual observation in the visible time window';
+  const averageLabel = m.averageLabel ?? 'Trailing average';
   state.average.textContent = average
-    ? `Trailing average: ${average.v.toFixed(1)} s`
-    : 'Trailing average: unavailable at this time';
+    ? `${averageLabel}: ${average.v.toFixed(1)} s`
+    : `${averageLabel}: unavailable at this time`;
+  if (m.secondaryAverage) {
+    const points = m.secondaryAverage.averages,
+      secondary = points[boundary(points, result.time, 't', true) - 1];
+    state.average.textContent += ` · ${m.secondaryAverage.label}: ${secondary ? secondary.v.toFixed(1) + ' s' : 'unavailable at this time'}`;
+  }
   const details = [];
   if (p?.id != null) details.push(`Passenger ${p.id}`);
   if (p?.bus != null) details.push(`Bus ${p.bus + 1}`);

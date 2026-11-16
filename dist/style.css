@@ -867,6 +867,11 @@ button:disabled {
     sans-serif;
   margin-top: 4px;
 }
+.dwell-numbers > span {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
 .chart-numbers small {
   grid-column: 1/-1;
   color: #74816b;

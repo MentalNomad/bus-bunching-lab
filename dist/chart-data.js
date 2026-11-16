@@ -84,9 +84,14 @@ function history(data) {
   h.commitRevision = data.commitRevision;
   return h;
 }
-function averageHistory(h, data, windowSize, mode) {
-  const batch = mode === 'batch',
-    key = batch ? 'batch' : 'individual';
+function averageHistory(
+  h,
+  data,
+  windowSize,
+  mode,
+  key = mode === 'batch' ? 'batch' : 'individual',
+) {
+  const batch = mode === 'batch';
   let state = h[key];
   // Keep the active window for each mode; changing its size recomputes once.
   if (!state || state.windowSize !== windowSize)
@@ -193,6 +198,28 @@ export function chartData(data, now, windowSize = 20, mode = 'batch') {
     raw = data.slice(boundary(data, Math.max(0, now - 3600)), end),
     recent = data.slice(boundary(data, Math.max(0, now - 60)), end);
   return view(raw, recent, averageHistory(h, data, windowSize, mode), now);
+}
+// Dwell records are completed served visits, not passenger groups or elapsed-minute bins.
+export function dwellData(data, now, stopCount) {
+  const h = history(data);
+  if (!h.ordered)
+    return dwellData(
+      [...data].sort((a, b) => a.t - b.t),
+      now,
+      stopCount,
+    );
+  const end = boundary(data, now, true);
+  return {
+    previous: data[end - 1] ?? null,
+    short: view(
+      data.slice(boundary(data, Math.max(0, now - 3600)), end),
+      [],
+      averageHistory(h, data, 3, 'individual'),
+      now,
+    ),
+    // A separate cache keeps both windows incremental instead of rebuilding on every draw.
+    route: view([], [], averageHistory(h, data, stopCount, 'individual', 'route'), now),
+  };
 }
 export function sharedScale(datasets, now, windowSize = 20, mode = 'batch', fixed = 0) {
   if (Number.isFinite(fixed) && fixed > 0) return fixed;
