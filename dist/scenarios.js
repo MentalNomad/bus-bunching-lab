@@ -36,9 +36,9 @@ export const scenarios = [
     name: 'One delay → bunching',
     description:
       common +
-      'At minute 20, Bus 1 receives a 60-second hold at its current or next stop. No recovery is programmed. The delay is small at first; watch it compound through minutes 40–60 as the delayed bus meets larger queues and its follower catches up.',
+      'At minute 25, while Bus 1 serves Stop 8, queue 1.1× travel time for its next full segment. In this default setup it departs at 25:36: road travel grows from 40 to 44 seconds, while the five-second starting delay stays unchanged, adding exactly four seconds. Normal travel resumes after that segment; there is no hold or recovery. The disturbance is subtle at first, grows through minutes 40–60, and brings all four buses together by about minute 90. Edited setups may change whether Bus 1 is stopped when the instruction occurs.',
     config: { ...base },
-    events: delay(),
+    events: [{ t: 1500, type: 'slow', bus: 0, value: 1.1 }],
   },
   {
     id: 'variance',
@@ -53,7 +53,7 @@ export const scenarios = [
     name: 'Recover with coordinated holds',
     description:
       common +
-      'Hold Bus 1 for 60 seconds at minute 20. At minute 25, give each of Buses 2, 3 and 4 a 60-second hold at its current or next stop. These are four timed instructions, with no automatic policy. Compare minutes 30–60 with One delay → bunching: delaying the other buses can reduce later passenger delay. This script is tuned to the fixed setup; it is not a general dispatcher and does not guarantee permanent spacing.',
+      'Hold Bus 1 for 60 seconds at minute 20. At minute 25, give each of Buses 2, 3 and 4 a 60-second hold at its current or next stop. These are four timed instructions, with no automatic policy. Compare minutes 30–60 with a copy retaining only the minute-20 Bus 1 hold: delaying the other buses can reduce later passenger delay. This script is tuned to the fixed setup; it is not a general dispatcher and does not guarantee permanent spacing.',
     config: { ...base },
     events: [...delay(), ...[1, 2, 3].map((bus) => ({ t: 1500, type: 'hold', bus, value: 60 }))],
   },
@@ -62,7 +62,7 @@ export const scenarios = [
     name: 'Alternating express · partial recovery',
     description:
       common +
-      'Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 30 seconds. At service stops, buses with more than 3.75 stops ahead may alternate skipping and serving until the forward gap is at most 3.3 stops, with a 600-second cap. Accepted drop-offs remain served; one unrestricted bus remains. This gives partial correction in the default run, not a complete cure. Compare actual bypasses, passed-over riders and passenger time with One delay → bunching.',
+      'Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 30 seconds. At service stops, buses with more than 3.75 stops ahead may alternate skipping and serving until the forward gap is at most 3.3 stops, with a 600-second cap. Accepted drop-offs remain served; one unrestricted bus remains. This gives partial correction in the default run, not a complete cure. Compare actual bypasses, passed-over riders and passenger time with an otherwise identical copy whose recovery policy is null, retaining the minute-20 hold.',
     config: { ...base },
     events: delay(),
     policy: 'express',
@@ -102,7 +102,7 @@ export const scenarios = [
     name: 'Recover with drop-off-only service',
     description:
       common +
-      'Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 5 seconds. At a service stop, a bus with more than 3.3 stops ahead and less than 2.7 behind admits no new riders for one stop location, with a 900-second safety cap. The condition is checked again on later visits, so a further one-stop correction can be assigned if needed. Every accepted drop-off is served and at least one bus remains unrestricted. Watch improved spacing alongside the riders passed over; compare One delay → bunching and Too much drop-off-only.',
+      'Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 5 seconds. At a service stop, a bus with more than 3.3 stops ahead and less than 2.7 behind admits no new riders for one stop location, with a 900-second safety cap. The condition is checked again on later visits, so a further one-stop correction can be assigned if needed. Every accepted drop-off is served and at least one bus remains unrestricted. Watch improved spacing alongside riders passed over; compare a copy with recovery_policy set to null, retaining the minute-20 hold, and Too much drop-off-only.',
     config: { ...base },
     events: delay(),
     policy: 'two-gap',
@@ -193,7 +193,7 @@ export const scenarios = [
     name: 'Recover with short announced skips',
     description:
       common +
-      'Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 5 seconds. A bus at a stop with more than 3.3 stops ahead and less than 2.7 behind announces one lead-in location, then two pattern locations: skip one and serve one, capped at 900 seconds. The bounded pattern may be assigned again on a later visit. Accepted drop-offs override skips; at least one bus stays unrestricted. Actual bypasses occur in the default run and both spacing and passenger time improve relative to One delay → bunching. Compare with the long six-stop lead-in.',
+      'Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 5 seconds. A bus at a stop with more than 3.3 stops ahead and less than 2.7 behind announces one lead-in location, then two pattern locations: skip one and serve one, capped at 900 seconds. The bounded pattern may be assigned again on a later visit. Accepted drop-offs override skips; at least one bus stays unrestricted. Actual bypasses occur in the default run and both spacing and passenger time improve relative to an otherwise identical copy whose recovery policy is null, retaining the minute-20 hold. Compare with the long six-stop lead-in.',
     config: { ...base },
     events: delay(),
     policy: 'two-gap',

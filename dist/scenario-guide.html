@@ -239,7 +239,7 @@
   "format": "Bus Bunching Lab scenario",
   "notes": "Units: seconds from time zero; bus numbers start at 1. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
   "name": "Alternating express · partial recovery",
-  "description": "12 stops, 4 buses, 40-second segments, fixed arrivals at 3 passengers per stop per minute, four-stop rides, and 5-second stopping and starting delays. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 30 seconds. At service stops, buses with more than 3.75 stops ahead may alternate skipping and serving until the forward gap is at most 3.3 stops, with a 600-second cap. Accepted drop-offs remain served; one unrestricted bus remains. This gives partial correction in the default run, not a complete cure. Compare actual bypasses, passed-over riders and passenger time with One delay → bunching.",
+  "description": "12 stops, 4 buses, 40-second segments, fixed arrivals at 3 passengers per stop per minute, four-stop rides, and 5-second stopping and starting delays. Hold Bus 1 for 60 seconds at minute 20. From minute 25 through 60, check every 30 seconds. At service stops, buses with more than 3.75 stops ahead may alternate skipping and serving until the forward gap is at most 3.3 stops, with a 600-second cap. Accepted drop-offs remain served; one unrestricted bus remains. This gives partial correction in the default run, not a complete cure. Compare actual bypasses, passed-over riders and passenger time with an otherwise identical copy whose recovery policy is null, retaining the minute-20 hold.",
   "setup": {
     "stops": 12,
     "buses": 4,
@@ -344,10 +344,17 @@
               <li>
                 <a href="./index.html?scenario=delay" target="_blank" rel="noopener"
                   >One delay → bunching</a
-                >: a minute-20 hold compounds. Compare with
-                <a href="./examples/coordinated-holds.json" download>coordinated holds</a>, which
-                holds Buses 2–4 for 60 seconds at minute 25. This fixed script improves minutes
-                30–60 in the supplied setup; it is not an automatic dispatcher or permanent cure.
+                >: a minute-25 command queues one 1.1× full travel segment, adding four seconds. At
+                the default settings Bus 1 is serving Stop 8, departs at 25:36, and reaches Stop 9
+                at 26:25 rather than 26:21; the five-second starting penalty is unchanged. Watch
+                minutes 40–90 for the cascade. Download
+                <a href="./examples/four-second-delay.json" download>the four-second recipe</a>.
+                Edited setups may change whether the bus is stopped at the command time. The
+                recovery lessons use a larger minute-20, 60-second hold. For a matched comparison
+                with <a href="./examples/coordinated-holds.json" download>coordinated holds</a>,
+                retain its initial Bus 1 hold and remove only the later holds for Buses 2–4. This
+                fixed script improves minutes 30–60 in its supplied setup; it is not an automatic
+                dispatcher or permanent cure.
               </li>
               <li>
                 <a href="./examples/drop-off-only.json" download

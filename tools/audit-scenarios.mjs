@@ -68,8 +68,10 @@ export function observeLesson(definition, { seed, overrides = {} } = {}) {
 export function auditLesson(definition, options) {
   const treatment = observeLesson(definition, options);
   const uncontrolled = structuredClone(definition);
-  // Retain the minute-20 disruption, remove later recovery actions and policy.
-  uncontrolled.events = uncontrolled.events.filter((x) => x.t <= 1200);
+  // Retain the initial disruption, including the minute-25 slowdown lesson.
+  // Later timed instructions and the policy are the recovery treatment.
+  const disruptionTime = Math.min(...uncontrolled.events.map((x) => x.t));
+  uncontrolled.events = uncontrolled.events.filter((x) => x.t <= disruptionTime);
   delete uncontrolled.policy;
   delete uncontrolled.policyOptions;
   delete uncontrolled.policySchedule;

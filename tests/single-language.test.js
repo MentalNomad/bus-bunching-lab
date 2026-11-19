@@ -9,7 +9,7 @@ test('every downloadable example uses one complete language and reproduces its p
   const files = (await readdir(new URL('../dist/examples/', import.meta.url))).filter((f) =>
     f.endsWith('.json'),
   );
-  assert.equal(files.length, 19);
+  assert.equal(files.length, 20);
   for (const file of files) {
     const text = await readFile(new URL(`../dist/examples/${file}`, import.meta.url), 'utf8');
     const data = JSON.parse(text);

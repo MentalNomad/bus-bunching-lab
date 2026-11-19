@@ -24,7 +24,7 @@ test('exported scenario incorporates edited setup and timed manual interventions
   assert.equal(imported.config.seed, 123);
   assert.deepEqual(
     imported.events.map((x) => x.t),
-    [200, 200, 1200],
+    [200, 200, 1500],
   );
   assert.deepEqual(
     imported.events.map((x) => x.bus),

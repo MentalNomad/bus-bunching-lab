@@ -15,6 +15,7 @@ test('current lessons use explicit five-second maneuvers and self-contained reci
   }
   const downloads = {
     'balanced-route': 'balanced-corrected',
+    'four-second-delay': 'delay',
     'coordinated-holds': 'holds',
     'alternating-recovery': 'express',
     'two-gap-holds': 'two-gap-holds',
@@ -46,7 +47,10 @@ test('lesson claims hold for matched complete default cohorts, including failure
     scenarios.filter((s) => !s.aliasFor).map((s) => [s.id, auditLesson(s)]),
   );
   assert(results['balanced-corrected'].treatment.lateGapCV < 1e-9);
-  assert(results.delay.treatment.lateGapCV > 0.8);
+  // The four-second disturbance grows more gradually; a separate regression
+  // follows its continuous run through full bunching at minute 90.
+  assert(results.delay.treatment.lateGapCV > 0.3);
+  assert.equal(results.delay.meanChangePercent, 0);
   assert(results.variance.treatment.lateGapCV > 1);
   for (const id of ['holds', 'dropoff', 'short-announced-skips']) {
     const r = results[id];

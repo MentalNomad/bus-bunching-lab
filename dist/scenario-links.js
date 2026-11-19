@@ -1,4 +1,4 @@
-import { scenarios } from './scenarios.js?v=20261021a';
+import { scenarios } from './scenarios.js?v=20261118a';
 export const builtInScenarioIds = scenarios.map((s) => s.id);
 export function scenarioFromSearch(search) {
   const id = new URLSearchParams(search).get('scenario');

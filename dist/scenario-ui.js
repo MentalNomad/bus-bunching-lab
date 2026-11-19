@@ -1,10 +1,10 @@
-import { scenarios } from './experiment.js?v=20261021a';
+import { scenarios } from './experiment.js?v=20261118a';
 import {
   parseScenario,
   serializeScenario,
   ruleDescriptions,
 } from './scenario-format.js?v=20261021a';
-import { builtInScenarioIds, scenarioUrl } from './scenario-links.js?v=20261021a';
+import { builtInScenarioIds, scenarioUrl } from './scenario-links.js?v=20261118a';
 const storageKey = 'bus-lab-custom-scenarios';
 function readCustomPresets() {
   const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');

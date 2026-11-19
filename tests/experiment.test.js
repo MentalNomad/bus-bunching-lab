@@ -41,14 +41,14 @@ test('serialized copies are independent and preserve future replay and seeded de
 });
 test('scheduled dispatch fires exactly once at its boundary and rewind repeats it', () => {
   const e = new Experiment({}, 'delay');
-  e.advanceTo(1199);
+  e.advanceTo(1499);
   assert.equal(e.sim.log.length, 0);
-  e.advanceTo(1200);
+  e.advanceTo(1500);
   assert.equal(e.sim.log.length, 1);
-  e.advanceTo(1200);
+  e.advanceTo(1500);
   assert.equal(e.sim.log.length, 1);
-  e.seek(1199);
-  e.advanceTo(1200);
+  e.seek(1499);
+  e.advanceTo(1500);
   assert.equal(e.sim.log.length, 1);
 });
 test('recovery presets improve spacing while keeping passenger costs visible', () => {
@@ -61,12 +61,16 @@ test('recovery presets improve spacing while keeping passenger costs visible', (
     results[scenario.id] = s;
   }
   assert(results.balanced.gapCV < 1e-10);
-  assert(results.delay.gapCV > 1);
+  assert(results.delay.gapCV > 0.8);
   assert(results.variance.gapCV > 1);
   assert(results.holds.gapCV < 0.3);
   assert(results.express.gapCV < 0.8);
   assert.equal(results.express.transfers, 0);
-  assert(results.holds.meanWait < results.delay.meanWait);
+  const reference = structuredClone(scenarios.find((s) => s.id === 'holds'));
+  reference.events = reference.events.slice(0, 1);
+  const heldWithoutRecovery = new Experiment({}, 'hold-reference', reference);
+  heldWithoutRecovery.advanceTo(3600);
+  assert(results.holds.meanWait < heldWithoutRecovery.sim.summary().meanWait);
 });
 test('invalid copies and commands fail without corrupting the timeline', () => {
   const e = new Experiment();

@@ -1,12 +1,12 @@
 import { setupModelControls } from './model-ui.js?v=20261021a';
 import { Simulation, MAX_SIMULATION_SECONDS } from './engine.js?v=20261021a';
-import { Experiment, scenarios } from './experiment.js?v=20261021a';
+import { Experiment, scenarios } from './experiment.js?v=20261118a';
 import { chartData, dwellData, sharedScale } from './chart-data.js?v=20261116b';
 import { updateChartInspection, clearChartInspection } from './chart-inspection.js?v=20261116b';
 import { setupLayout } from './layout.js?v=20261023a';
-import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261021a';
+import { loadCustomPresets, setupScenarioLibrary } from './scenario-ui.js?v=20261118a';
 import { setupHelp } from './help.js?v=20261116b';
-import { scenarioFromSearch } from './scenario-links.js?v=20261021a';
+import { scenarioFromSearch } from './scenario-links.js?v=20261118a';
 import { advanceMaxSpeed, advanceTimedSpeed } from './playback.js?v=20261021a';
 loadCustomPresets();
 let refreshHelp = () => {};

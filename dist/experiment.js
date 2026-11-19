@@ -12,7 +12,7 @@ import { summarizeCohort } from './measurements.js?v=20261021a';
 
 import { normalizeGapPolicy } from './dispatch-rules.js?v=20261021a';
 
-import { scenarios } from './scenarios.js?v=20261021a';
+import { scenarios } from './scenarios.js?v=20261118a';
 export { scenarios };
 
 // Replay from the seed and timestamped commands restores passengers, random state,

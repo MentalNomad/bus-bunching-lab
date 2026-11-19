@@ -1,0 +1,40 @@
+{
+  "format": "Bus Bunching Lab scenario",
+  "notes": "Units: seconds from time zero; bus numbers start at 1. At equal timestamps, mandatory arrivals and completions precede listed manual actions, then one automatic decision batch, then door starts and departures. Cutoff includes arrivals at that timestamp, cancels later demand and ends new automatic decisions. The temporal control window is start inclusive, end exclusive; its automatic components restore normal service at end. Manual bounded instructions may finish or expire during drain. Cohort includes all present just before its boundary plus births through cutoff, retaining original whole-journey clocks. until_recovered uses forward gap at most 110% of ideal; a convoy leader owns the long wrap arc. Stopping precedes overhead and sequential door service; both overlap holds. Starting extends the following travel segment after service/holds. True bypasses incur neither stopping nor starting penalties. A boarding_limit permits the specified number of new boardings per visit; existing boarding finishes. See scenario-guide.html for bounds and definitions.",
+  "name": "One delay → bunching",
+  "description": "12 stops, 4 buses, 40-second segments, fixed arrivals at 3 passengers per stop per minute, four-stop rides, and 5-second stopping and starting delays. At minute 25, while Bus 1 serves Stop 8, queue 1.1× travel time for its next full segment. In this default setup it departs at 25:36: road travel grows from 40 to 44 seconds, while the five-second starting delay stays unchanged, adding exactly four seconds. Normal travel resumes after that segment; there is no hold or recovery. The disturbance is subtle at first, grows through minutes 40–60, and brings all four buses together by about minute 90. Edited setups may change whether Bus 1 is stopped when the instruction occurs.",
+  "setup": {
+    "stops": 12,
+    "buses": 4,
+    "travel_seconds_per_segment": 40,
+    "passengers_per_stop_per_minute": 3,
+    "arrival_pattern": "fixed",
+    "boarding_seconds_per_passenger": 2,
+    "debarking_seconds_per_passenger": 1,
+    "ride_length_stops": 4,
+    "ride_pattern": "fixed",
+    "random_seed": 42
+  },
+  "model": {
+    "stop_overhead_seconds": 0,
+    "stopping_delay_seconds": 5,
+    "starting_delay_seconds": 5,
+    "bus_capacity": null,
+    "allow_overtaking": true,
+    "calibration_notes": "Illustrative teaching model; not empirically calibrated."
+  },
+  "observation": {
+    "cohort_start_seconds": 0,
+    "arrival_cutoff_seconds": null,
+    "drain_max_seconds": 86400
+  },
+  "interventions": [
+    {
+      "at_seconds": 1500,
+      "bus": 1,
+      "action": "slow",
+      "multiplier": 1.1
+    }
+  ],
+  "recovery_policy": null
+}

@@ -2,11 +2,13 @@
 
 Reviewed 21 October 2026. Every built-in teaching preset uses a **5-second stopping delay** and a **5-second starting delay**. All lessons and downloadable examples use one scenario language and one simulation model. The old `balanced` and `corrected-variance` URLs remain aliases for current lessons.
 
+The `delay` lesson was updated on 18 November 2026: a 1.1× slowdown of one full segment near minute 25 adds only four seconds. Its row below was recomputed. It becomes a full convoy by about minute 90 in the continuous default run. Recovery lessons retain their stated minute-20, 60-second hold; compare each recovery with a copy retaining that same initial disruption.
+
 Run `npm run audit:scenarios` to reproduce the table, or `node tools/audit-scenarios.mjs --json` for samples, decisions, accounting checks and matched passenger-birth fingerprints. Regression tests cover the advertised successes **and counterexamples**.
 
 ## Comparison method
 
-Each lesson is paired with its own uncontrolled copy, keeping its setup, seed and minute-20 disruption. Remove the recovery policy and later recovery actions. Both runs use a cohort boundary at minute 20, an inclusive arrival cutoff at minute 60, and up to four further hours to drain. Everyone already waiting or riding at the boundary belongs to the cohort, retaining their original whole-journey clock. Complete means include initial wait, boarding, travel, holds, later waits and final alighting. Every reported cohort finishes and passes passenger/time accounting checks.
+Each lesson is paired with its own uncontrolled copy, keeping its setup, seed and initial disruption: the four-second lesson starts at minute 25; the recovery recipes use a minute-20 hold. Remove the recovery policy and later recovery actions. Both runs use a cohort boundary at minute 20, an inclusive arrival cutoff at minute 60, and up to four further hours to drain. Everyone already waiting or riding at the boundary belongs to the cohort, retaining their original whole-journey clock. Complete means include initial wait, boarding, travel, holds, later waits and final alighting. Every reported cohort finishes and passes passenger/time accounting checks.
 
 Gap variation is the mean coefficient of variation of circular gaps sampled every 15 seconds during minutes 45–60, before drain. Actual bypasses are counted before cutoff; an announcement alone is not a bypass. Journey-time change is against the lesson's own matching uncontrolled run. Negative is better. Continuous lessons receive a minute-60 cutoff only in this audit.
 
@@ -15,7 +17,7 @@ These are illustrative default outcomes for seed 42, not an optimized policy or 
 | Lesson ID              | Ride length (stops) | Late gap variation | Journey mean, seconds | Matching uncontrolled mean, seconds | Change | Actual bypasses |
 | ---------------------- | ------------------- | -----------------: | --------------------: | ----------------------------------: | -----: | --------------: |
 | balanced-corrected     | 4 fixed             |              0.000 |                 462.7 |                               462.7 |   0.0% |               0 |
-| delay                  | 4 fixed             |              0.987 |                 517.4 |                               517.4 |   0.0% |               0 |
+| delay                  | 4 fixed             |              0.419 |                 476.5 |                               476.5 |   0.0% |               0 |
 | variance               | 1–7 random          |              1.235 |                 608.0 |                               608.0 |   0.0% |               0 |
 | holds                  | 4 fixed             |              0.101 |                 468.6 |                               517.4 |  -9.4% |               0 |
 | express                | 4 fixed             |              0.533 |                 509.1 |                               517.4 |  -1.6% |               6 |
@@ -35,7 +37,7 @@ These are illustrative default outcomes for seed 42, not an optimized policy or 
 
 ## What changed and why
 
-- **Baseline, delay and random demand:** retain distinct causes of bunching with the new maneuver penalties. The minute-20 fixed delay compounds gradually; show several laps.
+- **Baseline, delay and random demand:** retain distinct causes of bunching with the maneuver penalties. The basic delay queues one 1.1× segment at minute 25 while Bus 1 serves Stop 8. Its next segment begins at 25:36, takes 49 seconds instead of 45 including the unchanged starting penalty, and normal travel resumes afterward. Show minutes 40–90 to see this four-second disturbance compound; the recovery lessons still use a larger, explicitly stated hold.
 - **Coordinated holds:** the former bounded polling preset did not sustain its claimed recovery. The revised `holds` script gives Buses 2–4 a 60-second hold at minute 25 after Bus 1's minute-20 hold. It demonstrates reduced later passenger delay; it is not an adaptive dispatcher or a permanent cure.
 - **Alternating and fixed-count express:** both actually bypass stops and provide partial correction. Accepted drop-offs remain protected, with no forced transfers. Descriptions no longer promise full recovery.
 - **Two-gap holds:** retain the 30-second action cap, 90-second per-bus budget, cooldown and free convoy leader. Label it limited correction: these budgets do not erase this disturbance.
