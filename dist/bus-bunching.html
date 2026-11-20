@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Watch bus bunching develop on three playable routes, from random passenger arrivals to a single four-second delay."
+    />
+    <title>Bus Bunching</title>
+    <link rel="stylesheet" href="./introduction.css" />
+    <script type="module" src="./lesson-player.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to introduction</a>
+    <header class="masthead">
+      <a class="brand" href="./index.html"><span aria-hidden="true">↻</span> Bus Bunching Lab</a>
+      <nav aria-label="Experiments">
+        <a href="#random">Random arrivals</a><a href="#fixed">Fixed arrivals</a
+        ><a href="#delay">One delay</a>
+      </nav>
+    </header>
+    <main id="main">
+      <section class="lesson opening" id="random" aria-labelledby="title">
+        <div class="copy">
+          <h1 id="title">Bus Bunching</h1>
+          <p class="lead">
+            You wait a long time for a bus. Then two turn up together. How can that happen on an
+            evenly spaced route?
+          </p>
+          <p>
+            Imagine a few extra people waiting at one stop. Their bus takes longer to board them.
+            During that delay, more riders arrive at the stops ahead. The following bus finds
+            shorter queues, spends less time boarding, and catches up. That feedback is how buses
+            bunch.
+          </p>
+          <h2 class="prompt">Watch a gap open</h2>
+          <p>
+            Press Play. Four buses circle twelve stops clockwise. In this run, passengers arrive at
+            random and take rides of different lengths. Follow one bus and the gap behind it for a
+            few laps. Pause or step back a minute to see where a pair first draws close.
+          </p>
+        </div>
+        <figure class="inset" data-preset="variance">
+          <figcaption>Random arrivals</figcaption>
+          <div class="player"></div>
+        </figure>
+      </section>
+      <section class="lesson" id="fixed" aria-labelledby="fixed-title">
+        <div class="copy">
+          <h2 id="fixed-title">What keeps the buses apart?</h2>
+          <p>
+            Give each stop one new passenger every twenty seconds, and give everyone a four-stop
+            ride. Now each bus finds the same workload as its peers. They board, travel, and stop in
+            step.
+          </p>
+          <p>
+            This is the route in equilibrium. The queues fill and empty, but the gap from one bus to
+            the next stays at three stops for as long as the pattern repeats.
+          </p>
+          <p class="observe">
+            <strong>Try it.</strong> Choose Max speed and let hundreds or thousands of minutes pass.
+            Pause at any point and check the largest gap.
+          </p>
+        </div>
+        <figure class="inset" data-preset="balanced-corrected">
+          <figcaption>Fixed arrivals</figcaption>
+          <div class="player"></div>
+        </figure>
+      </section>
+      <section class="lesson" id="delay" aria-labelledby="delay-title">
+        <div class="copy">
+          <h2 id="delay-title">Four seconds is enough.</h2>
+          <p>
+            Start with the same clockwork route. At 25:36, Bus 1 leaves Stop 8. For that one
+            segment, its road travel takes 1.1 times as long: 44 seconds instead of 40. It then
+            returns to its usual pace.
+          </p>
+          <p>
+            Four seconds can put an extra passenger at the door. Boarding that rider costs a little
+            more time. The bus behind can catch up, leaving a wider gap behind itself. Farther back,
+            another bus meets the queues that grew in that gap.
+          </p>
+          <p class="observe">
+            <strong>Follow the ripple.</strong> Watch Bus 1 after minute 25, then follow the other
+            three. Which pair closes up first? Compare the gaps around minute 60 with the convoy
+            around minute 90.
+          </p>
+        </div>
+        <figure class="inset" data-preset="delay">
+          <figcaption>One delayed segment</figcaption>
+          <div class="player"></div>
+        </figure>
+      </section>
+      <section class="recovery" aria-labelledby="recovery-title">
+        <div>
+          <h2 id="recovery-title">Can a dispatcher break up the bunch?</h2>
+          <p>
+            Holding a bus briefly can give the one ahead room to move. A delayed bus can regain
+            ground by taking drop-offs only or announcing a pattern of skipped stops. Each choice
+            changes who waits and for how long.
+          </p>
+        </div>
+        <div>
+          <p>
+            Try the recovery scenarios and compare the time passengers spend waiting and riding.
+          </p>
+          <a class="lab-link" href="./index.html#scenarioLibrary">Explore the Bus Bunching Lab</a>
+        </div>
+      </section>
+    </main>
+    <noscript><p>Enable JavaScript to play the three simulations.</p></noscript>
+    <template id="playback">
+      <div class="map">
+        <svg
+          viewBox="0 0 340 310"
+          role="img"
+          aria-label="Clockwise route with twelve numbered stops and four buses"
+        ></svg>
+        <div class="map-stat">
+          <span>Largest gap</span><strong class="gap">3.00</strong><span>stops</span>
+        </div>
+      </div>
+      <div class="loads" aria-label="Passengers riding each bus"></div>
+      <div class="transport">
+        <div class="toolbar">
+          <button class="play" type="button">Play</button>
+          <button class="back" type="button" aria-label="Back one minute">−1 min</button>
+          <button class="step" type="button" aria-label="Forward one minute">+1 min</button>
+          <button class="reset" type="button">Reset</button>
+          <label
+            >Speed
+            <select class="speed">
+              <option value="1">1×</option>
+              <option value="10">10×</option>
+              <option value="60" selected>60×</option>
+              <option value="120">120×</option>
+              <option value="480">480×</option>
+              <option value="960">960×</option>
+              <option value="max">Max</option>
+            </select></label
+          >
+        </div>
+        <label class="timeline"
+          >Elapsed time <span class="clock">00:00</span
+          ><input
+            type="range"
+            min="0"
+            max="0"
+            value="0"
+            step="1"
+            aria-label="Review elapsed time"
+            disabled
+        /></label>
+        <p role="status" class="notice"></p>
+      </div>
+    </template>
+  </body>
+</html>
